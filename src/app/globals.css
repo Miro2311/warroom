@@ -1,0 +1,29 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root {
+  --background: #0a0a12;
+  --foreground: #ededed;
+  --neon-green: #00ff9d;
+  --neon-pink: #ff00ff;
+  --neon-red: #ff0033;
+  --deep-space: #050508;
+}
+
+body {
+  color: var(--foreground);
+  background: var(--background);
+}
+
+@layer utilities {
+  .text-balance {
+    text-wrap: balance;
+  }
+  
+  .tactical-grid {
+    background-size: 50px 50px;
+    background-image: linear-gradient(to right, rgba(26, 26, 46, 0.2) 1px, transparent 1px),
+                      linear-gradient(to bottom, rgba(26, 26, 46, 0.2) 1px, transparent 1px);
+  }
+}
