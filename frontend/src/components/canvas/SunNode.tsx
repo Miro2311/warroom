@@ -36,13 +36,13 @@ export const SunNode = ({ data }: SunNodeProps) => {
         </div>
       </div>
       
-      {/* Handle for connecting to planets */}
+      {/* Handle for connecting to planets - Centered */}
       <Handle
         type="source"
-        position={Position.Bottom} // Position doesn't matter much for center node, but required
+        position={Position.Right}
         className="opacity-0"
+        style={{ top: '50%', right: '50%' }}
       />
-      <Handle type="target" position={Position.Top} className="opacity-0" />
     </div>
   );
 };

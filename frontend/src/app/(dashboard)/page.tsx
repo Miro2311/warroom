@@ -1,5 +1,4 @@
 import SolarSystem from "@/components/canvas/SolarSystem";
-import { PartnerPanel } from "@/components/dashboard/PartnerPanel";
 import { SupabaseTest } from "@/components/debug/SupabaseTest";
 
 export default function Home() {
@@ -14,8 +13,6 @@ export default function Home() {
       <div className="w-full h-full">
         <SolarSystem />
       </div>
-
-      <PartnerPanel />
 
       {/* Supabase Connection Test */}
       <SupabaseTest />

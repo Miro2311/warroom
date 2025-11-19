@@ -59,8 +59,13 @@ export const PlanetNode = ({ data }: PlanetNodeProps) => {
         $$: {partner.financial_total} | SIMP: {Math.round(simpIndex)}
       </div>
 
-      <Handle type="target" position={Position.Top} className="opacity-0" />
-      <Handle type="source" position={Position.Bottom} className="opacity-0" />
+      {/* Handle for connection lines - Centered */}
+      <Handle
+        type="target"
+        position={Position.Left}
+        className="opacity-0"
+        style={{ top: '50%', left: '50%' }}
+      />
     </div>
   );
 };
