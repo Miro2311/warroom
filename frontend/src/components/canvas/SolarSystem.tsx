@@ -22,6 +22,7 @@ import {
 } from "d3-force";
 import "@xyflow/react/dist/style.css";
 import { useStore } from "@/store/useStore";
+import { useLoadData } from "@/hooks/useLoadData";
 import { SunNode } from "./SunNode";
 import { PlanetNode } from "./PlanetNode";
 
@@ -38,10 +39,13 @@ interface D3Node extends SimulationNodeDatum {
 }
 
 function WarRoomFlow() {
-  const { user, partners, setSelectedPartnerId } = useStore();
+  const { user, partners, loading, setSelectedPartnerId } = useStore();
   const [nodes, setNodes, onNodesChange] = useNodesState<Node>([]);
   const [edges, setEdges, onEdgesChange] = useEdgesState<Edge>([]);
   const { fitView } = useReactFlow();
+
+  // Load data from Supabase
+  useLoadData();
 
   const onNodeClick = useCallback((event: React.MouseEvent, node: Node) => {
     if (node.type === "planet") {
@@ -57,7 +61,7 @@ function WarRoomFlow() {
 
   // Initialize Nodes & Edges
   useEffect(() => {
-    if (!user) return;
+    if (!user || loading) return;
 
     // 1. Create initial nodes (without positions, D3 will handle it)
     // Sun
@@ -143,7 +147,23 @@ function WarRoomFlow() {
     return () => {
       simulation.stop();
     };
-  }, [user, partners, setNodes, setEdges]);
+  }, [user, partners, loading, setNodes, setEdges]);
+
+  // Show loading state
+  if (loading || !user) {
+    return (
+      <div className="w-full h-full flex items-center justify-center bg-deep-space">
+        <div className="text-center">
+          <div className="animate-pulse text-holo-cyan text-2xl font-display mb-2">
+            Loading War Room...
+          </div>
+          <div className="text-white/50 text-sm font-mono">
+            Initializing tactical systems
+          </div>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <ReactFlow

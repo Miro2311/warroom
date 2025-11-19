@@ -16,6 +16,7 @@ export interface User {
 export interface PartnerNode {
   id: string;
   user_id: string;
+  group_id: string;
   nickname: string;
   status: RelationshipStatus;
   financial_total: number; // Total $$ spent

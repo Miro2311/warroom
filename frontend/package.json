@@ -9,7 +9,7 @@
     "lint": "next lint"
   },
   "dependencies": {
-    "@supabase/supabase-js": "^2.46.1",
+    "@supabase/supabase-js": "^2.83.0",
     "@xyflow/react": "^12.3.0",
     "clsx": "^2.1.1",
     "d3-force": "^3.0.0",
@@ -26,6 +26,7 @@
     "@types/react": "^18",
     "@types/react-dom": "^18",
     "autoprefixer": "^10.4.22",
+    "dotenv": "^17.2.3",
     "eslint": "^8",
     "eslint-config-next": "15.0.3",
     "postcss": "^8",

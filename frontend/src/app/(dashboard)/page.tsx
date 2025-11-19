@@ -1,5 +1,6 @@
 import SolarSystem from "@/components/canvas/SolarSystem";
 import { PartnerPanel } from "@/components/dashboard/PartnerPanel";
+import { SupabaseTest } from "@/components/debug/SupabaseTest";
 
 export default function Home() {
   return (
@@ -9,13 +10,16 @@ export default function Home() {
           RWR <span className="text-xs text-white font-mono font-normal opacity-70">v1.1</span>
         </h1>
       </div>
-      
+
       <div className="w-full h-full">
         <SolarSystem />
       </div>
-      
+
       <PartnerPanel />
-      
+
+      {/* Supabase Connection Test */}
+      <SupabaseTest />
+
       {/* UI Overlay placeholder */}
       <div className="absolute bottom-4 right-4 z-10 text-right pointer-events-none opacity-70">
         <p className="text-xs text-white font-display tracking-widest uppercase">Relationship War Room</p>
