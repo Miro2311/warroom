@@ -588,6 +588,7 @@ export async function generateWeeklyBets(groupId: string): Promise<Bet[]> {
         betType: "system",
         category: template.category,
         deadline: weekEnd.toISOString(),
+        stakeAmount: 100,
       });
 
       generatedBets.push(bet);

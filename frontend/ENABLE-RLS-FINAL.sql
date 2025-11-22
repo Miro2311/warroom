@@ -61,6 +61,7 @@ END $$;
 
 -- Users policies
 DROP POLICY IF EXISTS "Users can view their own profile" ON public.users;
+DROP POLICY IF EXISTS "Users can create their own profile" ON public.users;
 DROP POLICY IF EXISTS "Users can update their own profile" ON public.users;
 DROP POLICY IF EXISTS "Users can view group members" ON public.users;
 
@@ -152,6 +153,11 @@ END $$;
 CREATE POLICY "Users can view their own profile"
 ON public.users FOR SELECT
 USING (auth.uid() = id);
+
+-- Users can create their own profile during signup
+CREATE POLICY "Users can create their own profile"
+ON public.users FOR INSERT
+WITH CHECK (auth.uid() = id);
 
 -- Users can update their own profile
 CREATE POLICY "Users can update their own profile"

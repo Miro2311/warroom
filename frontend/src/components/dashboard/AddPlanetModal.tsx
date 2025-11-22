@@ -61,7 +61,7 @@ export const AddPlanetModal: React.FC<AddPlanetModalProps> = ({ isOpen, onClose 
       // Award XP for adding a new partner
       if (user?.id && currentGroupId) {
         const { XPService } = await import("@/services/xpService");
-        await XPService.awardPartnerCreated(user.id, currentGroupId, data.id);
+        await XPService.awardPartnerAdded(user.id, currentGroupId, data.id);
         console.log("Awarded XP for creating new partner");
       }
 

@@ -162,7 +162,7 @@ export const BettingStudioTab: React.FC<BettingStudioTabProps> = ({
           wagers.map(async (wager) => {
             const { data: userData } = await supabase
               .from("users")
-              .select("id, username, avatar_url, level")
+              .select("id, username, avatar_url, level, current_xp, created_at, streak_count, last_activity_date, total_xp_earned, bet_currency")
               .eq("id", wager.user_id)
               .single();
 

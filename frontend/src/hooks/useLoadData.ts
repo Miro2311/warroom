@@ -21,6 +21,11 @@ export function useLoadData() {
     try {
       setLoading(true)
 
+      // Debug: Check if we have a session
+      const { data: { session } } = await supabase.auth.getSession()
+      console.log('Current session:', session ? 'EXISTS' : 'NONE')
+      console.log('Auth user ID:', authUser.id)
+
       // 1. Load user profile from public.users table
       const { data: userProfile, error: userError } = await supabase
         .from('users')
@@ -30,6 +35,33 @@ export function useLoadData() {
 
       if (userError) {
         console.error('Error loading user profile:', userError)
+        console.error('Error details:', JSON.stringify(userError, null, 2))
+        console.error('Error code:', userError.code)
+        console.error('Error message:', userError.message)
+
+        // If error is PGRST116 (no rows returned), it means profile doesn't exist
+        // Try to create it (this might fail if RLS blocks inserts too)
+        if (userError.code === 'PGRST116') {
+          console.log('User profile not found, attempting to create one...')
+          const { data: newProfile, error: createError } = await supabase
+            .from('users')
+            .insert({
+              id: authUser.id,
+              username: authUser.email?.split('@')[0] || 'User',
+              current_xp: 0,
+              level: 1,
+            })
+            .select()
+            .single()
+
+          if (createError) {
+            console.error('Failed to create user profile:', createError)
+          } else {
+            console.log('Created new user profile:', newProfile)
+            setUser(newProfile)
+          }
+        }
+
         setLoading(false)
         return
       }

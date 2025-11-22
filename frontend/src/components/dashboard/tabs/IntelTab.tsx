@@ -72,7 +72,7 @@ export const IntelTab: React.FC<IntelTabProps> = ({ partner }) => {
 
   // Form state
   const [newNote, setNewNote] = useState("");
-  const [newFlag, setNewFlag] = useState({ description: "", severity: "medium" as const });
+  const [newFlag, setNewFlag] = useState<{ description: string; severity: "low" | "medium" | "high" }>({ description: "", severity: "medium" });
   const [newRating, setNewRating] = useState({ rating: 5, comment: "" });
 
   useEffect(() => {
