@@ -3,71 +3,79 @@
 import { useEffect } from 'react'
 import { supabase } from '@/lib/supabase'
 import { useStore } from '@/store/useStore'
+import { useAuth } from '@/contexts/AuthContext'
 
 export function useLoadData() {
-  const { setUser, setPartners, setLoading } = useStore()
+  const { setUser, setPartners, setLoading, setCurrentGroupId } = useStore()
+  const { user: authUser } = useAuth()
 
   useEffect(() => {
-    loadDataFromDB()
-  }, [])
+    if (authUser) {
+      loadDataFromDB()
+    }
+  }, [authUser])
 
   async function loadDataFromDB() {
+    if (!authUser) return
+
     try {
       setLoading(true)
 
-      // 1. Load first user (für jetzt nehmen wir den ersten)
-      // Später: Load based on auth session
-      const { data: users, error: userError } = await supabase
+      // 1. Load user profile from public.users table
+      const { data: userProfile, error: userError } = await supabase
         .from('users')
         .select('*')
-        .limit(1)
+        .eq('id', authUser.id)
         .single()
 
       if (userError) {
-        console.warn('No user data available:', userError.message)
-        // Set mock data for development
-        setUser({
-          id: 'dev-user-1',
-          username: 'Dev User',
-          avatar_url: null,
-          current_xp: 0,
-          level: 1,
-          created_at: new Date().toISOString()
-        })
+        console.error('Error loading user profile:', userError)
         setLoading(false)
         return
       }
 
-      if (users) {
-        setUser(users)
+      if (userProfile) {
+        setUser(userProfile)
+        console.log('✅ User profile loaded:', userProfile)
 
-        // 2. Load partners for this user
+        // 2. Get selected group from localStorage
+        const selectedGroupId = localStorage.getItem('selectedGroupId')
+        console.log('📦 Selected group ID:', selectedGroupId)
+
+        if (!selectedGroupId) {
+          console.warn('⚠️ No group selected')
+          setLoading(false)
+          return
+        }
+
+        // Set current group ID in store for XP system
+        setCurrentGroupId(selectedGroupId)
+
+        // 3. Load partners for this user in this group
+        console.log('🔍 Loading partners for user:', authUser.id, 'in group:', selectedGroupId)
         const { data: partners, error: partnersError } = await supabase
           .from('partners')
           .select('*')
-          .eq('user_id', users.id)
+          .eq('user_id', authUser.id)
+          .eq('group_id', selectedGroupId)
+
+        console.log('📊 Partners query result:', { partners, error: partnersError })
 
         if (partnersError) {
-          console.warn('No partners data available:', partnersError.message)
+          console.error('❌ Error loading partners:', partnersError)
         }
 
         if (partners) {
+          console.log('✅ Setting partners:', partners.length, 'partners found')
           setPartners(partners)
+        } else {
+          console.warn('⚠️ No partners data returned')
         }
       }
 
       setLoading(false)
     } catch (error) {
       console.error('Failed to load data from DB:', error)
-      // Set mock data for development
-      setUser({
-        id: 'dev-user-1',
-        username: 'Dev User',
-        avatar_url: null,
-        current_xp: 0,
-        level: 1,
-        created_at: new Date().toISOString()
-      })
       setLoading(false)
     }
   }

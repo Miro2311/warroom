@@ -20,10 +20,66 @@ body {
   .text-balance {
     text-wrap: balance;
   }
-  
+
   .tactical-grid {
     background-size: 50px 50px;
     background-image: linear-gradient(to right, rgba(26, 26, 46, 0.2) 1px, transparent 1px),
                       linear-gradient(to bottom, rgba(26, 26, 46, 0.2) 1px, transparent 1px);
   }
+}
+
+@keyframes twinkle {
+  0%, 100% {
+    opacity: 0.3;
+  }
+  50% {
+    opacity: 1;
+  }
+}
+
+@keyframes nebula-drift {
+  0%, 100% {
+    transform: translate(0, 0) scale(1);
+  }
+  33% {
+    transform: translate(30px, -20px) scale(1.05);
+  }
+  66% {
+    transform: translate(-20px, 30px) scale(0.98);
+  }
+}
+
+@keyframes nebula-drift-reverse {
+  0%, 100% {
+    transform: translate(0, 0) scale(1);
+  }
+  33% {
+    transform: translate(-30px, 20px) scale(1.03);
+  }
+  66% {
+    transform: translate(20px, -30px) scale(0.97);
+  }
+}
+
+@keyframes nebula-pulse {
+  0%, 100% {
+    opacity: 0.02;
+    transform: scale(1);
+  }
+  50% {
+    opacity: 0.035;
+    transform: scale(1.1);
+  }
+}
+
+.animate-nebula-drift {
+  animation: nebula-drift 30s ease-in-out infinite;
+}
+
+.animate-nebula-drift-reverse {
+  animation: nebula-drift-reverse 35s ease-in-out infinite;
+}
+
+.animate-nebula-pulse {
+  animation: nebula-pulse 20s ease-in-out infinite;
 }

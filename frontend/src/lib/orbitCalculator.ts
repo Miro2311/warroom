@@ -19,6 +19,7 @@ export interface OrbitData {
  */
 const STATUS_WEIGHTS: Record<RelationshipStatus, number> = {
   'Exclusive': 1.0,           // Closest orbit
+  'Signed': 0.85,             // Close (committed)
   'Dating': 0.7,              // Close-medium
   'It\'s Complicated': 0.5,   // Medium
   'Talking': 0.3,             // Far
@@ -36,28 +37,24 @@ const ORBIT_TIERS = {
 };
 
 /**
- * Calculate orbit radius based on status + intimacy
+ * Fixed orbit radius per relationship status
+ * Each status has its own dedicated orbit ring
+ */
+const FIXED_ORBIT_RADII: Record<RelationshipStatus, number> = {
+  'Exclusive': 200,        // Closest - committed relationship
+  'Signed': 250,           // Very close - official/serious
+  'Dating': 350,           // Medium distance - dating phase
+  'Talking': 450,          // Further out - getting to know
+  'It\'s Complicated': 550, // Far - unclear relationship
+  'Graveyard': 750,        // Furthest - relationship ended
+};
+
+/**
+ * Calculate orbit radius based ONLY on status
+ * All partners with same status share the same orbit
  */
 export function calculateOrbitRadius(partner: PartnerNode): number {
-  // Get status weight (default 0.5 if status not recognized)
-  const statusWeight = STATUS_WEIGHTS[partner.status] || 0.5;
-
-  // Normalize intimacy score (1-10 → 0-1)
-  const intimacyFactor = Math.max(1, Math.min(10, partner.intimacy_score)) / 10;
-
-  // Combined proximity score (status has more weight)
-  // 60% status, 40% intimacy
-  const proximity = (statusWeight * 0.6) + (intimacyFactor * 0.4);
-
-  // Map proximity to pixel radius
-  // High proximity = small radius (close to sun)
-  // Low proximity = large radius (far from sun)
-  const minRadius = 150;  // Closest possible orbit
-  const maxRadius = 900;  // Farthest possible orbit
-
-  const radius = maxRadius - (proximity * (maxRadius - minRadius));
-
-  return Math.round(radius);
+  return FIXED_ORBIT_RADII[partner.status] || 450;
 }
 
 /**
@@ -96,14 +93,13 @@ export function getOrbitTier(radius: number): OrbitData['tier'] {
  * Get complete orbital data for a partner
  */
 export function getOrbitData(partner: PartnerNode): OrbitData {
-  const statusWeight = STATUS_WEIGHTS[partner.status] || 0.5;
-  const intimacyFactor = Math.max(1, Math.min(10, partner.intimacy_score)) / 10;
-  const proximity = (statusWeight * 0.6) + (intimacyFactor * 0.4);
-
   const radius = calculateOrbitRadius(partner);
   const period = calculateOrbitalPeriod(radius);
   const speed = calculateAngularVelocity(period);
   const tier = getOrbitTier(radius);
+
+  // Proximity is now just based on status weight
+  const proximity = STATUS_WEIGHTS[partner.status] || 0.5;
 
   return {
     radius,

@@ -67,6 +67,10 @@ export type Database = {
           intimacy_score: number
           created_at: string
           last_updated_at: string
+          cause_of_death: string | null
+          cause_of_death_custom: string | null
+          graveyard_date: string | null
+          photo_url: string | null
         }
         Insert: {
           id?: string
@@ -79,6 +83,10 @@ export type Database = {
           intimacy_score?: number
           created_at?: string
           last_updated_at?: string
+          cause_of_death?: string | null
+          cause_of_death_custom?: string | null
+          graveyard_date?: string | null
+          photo_url?: string | null
         }
         Update: {
           id?: string
@@ -91,6 +99,10 @@ export type Database = {
           intimacy_score?: number
           created_at?: string
           last_updated_at?: string
+          cause_of_death?: string | null
+          cause_of_death_custom?: string | null
+          graveyard_date?: string | null
+          photo_url?: string | null
         }
       }
     }

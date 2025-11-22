@@ -17,17 +17,34 @@ export const PlanetNode = ({ data }: PlanetNodeProps) => {
     switch (status) {
       case "Exclusive":
         return "bg-holo-cyan/10 border-holo-cyan text-holo-cyan shadow-[0_0_20px_rgba(0,240,255,0.3)]";
+      case "Signed":
+        return "bg-green-500/10 border-green-400 text-green-300 shadow-[0_0_15px_rgba(34,197,94,0.3)]";
       case "Dating":
-        return "bg-blue-500/10 border-blue-400 text-blue-300";
+        return "bg-purple-500/10 border-purple-400 text-purple-300 shadow-[0_0_15px_rgba(168,85,247,0.3)]";
       case "Talking":
-        return "bg-lust-pink/10 border-lust-pink text-lust-pink shadow-[0_0_15px_rgba(255,0,127,0.3)]";
+        return "bg-orange-500/10 border-orange-400 text-orange-300 shadow-[0_0_15px_rgba(251,146,60,0.3)]";
       case "It's Complicated":
-        return "bg-purple-500/10 border-purple-400 text-purple-300";
+        return "bg-yellow-500/10 border-yellow-400 text-yellow-300 shadow-[0_0_15px_rgba(234,179,8,0.3)]";
       case "Graveyard":
         return "bg-gray-800/50 border-gray-600 text-gray-400 grayscale opacity-60";
       default:
         return "bg-glass-panel border-white/20 text-gray-300";
     }
+  };
+
+  // Abbreviate status text for display
+  const getStatusDisplay = (status: string) => {
+    if (status === "It's Complicated") return "Complicated";
+    return status;
+  };
+
+  // Dynamic text size based on name length
+  const getTextSize = (name: string) => {
+    const length = name.length;
+    if (length <= 8) return "text-xs";
+    if (length <= 12) return "text-[10px]";
+    if (length <= 16) return "text-[9px]";
+    return "text-[8px]";
   };
 
   // Simp Index Logic
@@ -46,11 +63,14 @@ export const PlanetNode = ({ data }: PlanetNodeProps) => {
       <div className="absolute inset-1 rounded-full border border-white/10 opacity-50 group-hover:scale-90 transition-transform duration-700" />
       
       <div className="z-10 pointer-events-none flex flex-col items-center gap-1">
-        <span className="font-display font-bold text-xs uppercase tracking-wider max-w-[90%] truncate">
+        <span className={cn(
+          "font-display font-bold uppercase tracking-wider max-w-[90%] text-center px-1",
+          getTextSize(partner.nickname)
+        )}>
           {partner.nickname}
         </span>
-        <div className="px-1.5 py-0.5 rounded-full bg-black/40 border border-white/5 text-[9px] font-mono uppercase">
-          {partner.status}
+        <div className="px-1 py-0.5 rounded-full bg-black/40 border border-white/5 text-[7px] font-mono uppercase whitespace-nowrap">
+          {getStatusDisplay(partner.status)}
         </div>
       </div>
 
