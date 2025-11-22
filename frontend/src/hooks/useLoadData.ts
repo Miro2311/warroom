@@ -83,12 +83,11 @@ export function useLoadData() {
         // Set current group ID in store for XP system
         setCurrentGroupId(selectedGroupId)
 
-        // 3. Load partners for this user in this group
-        console.log('🔍 Loading partners for user:', authUser.id, 'in group:', selectedGroupId)
+        // 3. Load ALL partners in this group (not just current user's)
+        console.log('🔍 Loading ALL partners in group:', selectedGroupId)
         const { data: partners, error: partnersError } = await supabase
           .from('partners')
           .select('*')
-          .eq('user_id', authUser.id)
           .eq('group_id', selectedGroupId)
 
         console.log('📊 Partners query result:', { partners, error: partnersError })

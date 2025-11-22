@@ -7,6 +7,7 @@ import { AnimatedProgress, MetricDisplay } from "@/components/ui/metric-display"
 import { AnimatedBadge } from "@/components/ui/animated-badge";
 import { ParticleEffect } from "@/components/ui/particle-effect";
 import { Carousel, CarouselSlide } from "@/components/ui/carousel";
+import { usePartnerImages } from "@/hooks/usePartnerImages";
 import {
   DollarSign,
   Clock,
@@ -18,6 +19,7 @@ import {
   Upload,
   Image as ImageIcon,
   X as XIcon,
+  Loader2,
 } from "lucide-react";
 import { motion } from "framer-motion";
 
@@ -34,8 +36,15 @@ export const OverviewTab: React.FC<OverviewTabProps> = ({
   editedPartner,
   onUpdate,
 }) => {
-  const [profileImages, setProfileImages] = useState<CarouselSlide[]>([]);
   const [imageBlurred, setImageBlurred] = useState(true);
+  const {
+    images: profileImages,
+    loading: imagesLoading,
+    uploading,
+    uploadImage,
+    deleteImage,
+    deleteAllImages,
+  } = usePartnerImages(editedPartner.id);
 
   // Calculate metrics
   const simpIndex =
@@ -53,24 +62,22 @@ export const OverviewTab: React.FC<OverviewTabProps> = ({
     simpIndex > 500 ? "danger" : simpIndex > 200 ? "warning" : "success";
 
   // Handle image upload
-  const handleImageUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+  const handleImageUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (file) {
-      const reader = new FileReader();
-      reader.onloadend = () => {
-        const newSlide: CarouselSlide = {
-          src: reader.result as string,
-          alt: editedPartner.nickname,
-        };
-        setProfileImages((prev) => [...prev, newSlide]);
-      };
-      reader.readAsDataURL(file);
+      const success = await uploadImage(file);
+      if (!success) {
+        alert("Failed to upload image. Please try again.");
+      }
     }
   };
 
-  // Handle removing an image
-  const handleRemoveImage = (index: number) => {
-    setProfileImages((prev) => prev.filter((_, i) => i !== index));
+  // Handle removing all images
+  const handleRemoveAllImages = async () => {
+    const success = await deleteAllImages();
+    if (!success) {
+      alert("Failed to delete images. Please try again.");
+    }
   };
 
   return (
@@ -179,7 +186,11 @@ export const OverviewTab: React.FC<OverviewTabProps> = ({
               )}
             </div>
 
-            {profileImages.length > 0 ? (
+            {imagesLoading ? (
+              <div className="aspect-[3/4] rounded-lg bg-white/5 flex items-center justify-center">
+                <Loader2 className="w-8 h-8 text-holo-cyan animate-spin" />
+              </div>
+            ) : profileImages.length > 0 ? (
               <div className="space-y-3">
                 <Carousel
                   slides={profileImages}
@@ -201,21 +212,32 @@ export const OverviewTab: React.FC<OverviewTabProps> = ({
                         whileHover={{ scale: 1.02 }}
                         whileTap={{ scale: 0.98 }}
                       >
-                        <Upload className="w-3 h-3" />
-                        Add Image
+                        {uploading ? (
+                          <>
+                            <Loader2 className="w-3 h-3 animate-spin" />
+                            Uploading...
+                          </>
+                        ) : (
+                          <>
+                            <Upload className="w-3 h-3" />
+                            Add Image
+                          </>
+                        )}
                       </motion.div>
                       <input
                         type="file"
                         accept="image/*"
                         onChange={handleImageUpload}
                         className="hidden"
+                        disabled={uploading}
                       />
                     </label>
                     <motion.button
-                      onClick={() => setProfileImages([])}
-                      className="w-full px-3 py-2 bg-simp-red/20 hover:bg-simp-red/30 border border-simp-red/50 text-simp-red font-mono text-xs uppercase tracking-wider rounded transition-colors"
+                      onClick={handleRemoveAllImages}
+                      className="w-full px-3 py-2 bg-simp-red/20 hover:bg-simp-red/30 border border-simp-red/50 text-simp-red font-mono text-xs uppercase tracking-wider rounded transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
                       whileHover={{ scale: 1.02 }}
                       whileTap={{ scale: 0.98 }}
+                      disabled={uploading}
                     >
                       Remove All
                     </motion.button>
@@ -223,23 +245,36 @@ export const OverviewTab: React.FC<OverviewTabProps> = ({
                 )}
               </div>
             ) : (
-              <label className="cursor-pointer block">
+              <label className={`cursor-pointer block ${!isEditing || uploading ? 'pointer-events-none' : ''}`}>
                 <motion.div
                   className="relative aspect-[3/4] rounded-lg border-2 border-dashed border-white/20 hover:border-holo-cyan/50 bg-white/5 hover:bg-white/10 transition-all flex flex-col items-center justify-center gap-2"
-                  whileHover={{ scale: 1.01 }}
-                  whileTap={{ scale: 0.99 }}
+                  whileHover={{ scale: isEditing && !uploading ? 1.01 : 1 }}
+                  whileTap={{ scale: isEditing && !uploading ? 0.99 : 1 }}
                 >
-                  <Upload className="w-8 h-8 text-white/30" />
-                  <div className="text-center px-2">
-                    <p className="text-xs font-display text-white/70">
-                      {isEditing ? "Upload Images" : "No images"}
-                    </p>
-                    {isEditing && (
-                      <p className="text-[10px] font-mono text-white/50 mt-1">
-                        Fog of War Enabled
-                      </p>
-                    )}
-                  </div>
+                  {uploading ? (
+                    <>
+                      <Loader2 className="w-8 h-8 text-holo-cyan animate-spin" />
+                      <div className="text-center px-2">
+                        <p className="text-xs font-display text-holo-cyan">
+                          Uploading...
+                        </p>
+                      </div>
+                    </>
+                  ) : (
+                    <>
+                      <Upload className="w-8 h-8 text-white/30" />
+                      <div className="text-center px-2">
+                        <p className="text-xs font-display text-white/70">
+                          {isEditing ? "Upload Images" : "No images"}
+                        </p>
+                        {isEditing && (
+                          <p className="text-[10px] font-mono text-white/50 mt-1">
+                            Fog of War Enabled
+                          </p>
+                        )}
+                      </div>
+                    </>
+                  )}
                 </motion.div>
                 {isEditing && (
                   <input
@@ -247,6 +282,7 @@ export const OverviewTab: React.FC<OverviewTabProps> = ({
                     accept="image/*"
                     onChange={handleImageUpload}
                     className="hidden"
+                    disabled={uploading}
                   />
                 )}
               </label>

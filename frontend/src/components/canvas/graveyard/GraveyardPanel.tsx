@@ -48,33 +48,34 @@ export const GraveyardPanel = ({
 
           {/* Panel - Centered */}
           <motion.div
-            className="fixed top-1/2 left-1/2 z-[210] w-[90vw] max-w-5xl"
+            className="fixed top-1/2 left-1/2 z-[210] w-[95vw] md:w-[90vw] max-w-5xl"
             initial={{ opacity: 0, scale: 0.9, x: "-50%", y: "-50%" }}
             animate={{ opacity: 1, scale: 1, x: "-50%", y: "-50%" }}
             exit={{ opacity: 0, scale: 0.9, x: "-50%", y: "-50%" }}
             transition={{ type: "spring", stiffness: 300, damping: 30 }}
           >
-            <div className="bg-[#0A0A0F] border-2 border-toxic-green/30 rounded-lg shadow-[0_0_50px_rgba(57,255,20,0.2)] overflow-hidden max-h-[85vh] flex flex-col">
+            <div className="bg-[#0A0A0F] border-2 border-toxic-green/30 rounded-lg shadow-[0_0_50px_rgba(57,255,20,0.2)] overflow-hidden max-h-[95vh] md:max-h-[85vh] flex flex-col">
               {/* Header */}
-              <div className="p-6 border-b-2 border-toxic-green/20 flex items-center justify-between bg-gradient-to-r from-toxic-green/5 to-transparent">
-                <div>
-                  <h2 className="font-display text-2xl uppercase tracking-wider text-toxic-green drop-shadow-[0_0_10px_rgba(57,255,20,0.5)]">
-                    ⚰️ Graveyard
+              <div className="p-4 md:p-6 border-b-2 border-toxic-green/20 flex items-center justify-between bg-gradient-to-r from-toxic-green/5 to-transparent">
+                <div className="flex-1 min-w-0">
+                  <h2 className="font-display text-xl md:text-2xl uppercase tracking-wider text-toxic-green drop-shadow-[0_0_10px_rgba(57,255,20,0.5)] flex items-center gap-2">
+                    <span>⚰️</span>
+                    <span className="truncate">Graveyard</span>
                   </h2>
-                  <p className="font-mono text-sm text-gray-400 mt-1">
+                  <p className="font-mono text-xs md:text-sm text-gray-400 mt-1">
                     {graveyardPartners.length} {graveyardPartners.length === 1 ? 'soul' : 'souls'} laid to rest
                   </p>
                 </div>
                 <button
                   onClick={onClose}
-                  className="p-2 hover:bg-toxic-green/10 rounded-lg transition-colors border border-toxic-green/20"
+                  className="p-2 hover:bg-toxic-green/10 rounded-lg transition-colors border border-toxic-green/20 min-w-[44px] min-h-[44px] flex items-center justify-center"
                 >
-                  <X className="w-6 h-6 text-toxic-green" />
+                  <X className="w-5 h-5 md:w-6 md:h-6 text-toxic-green" />
                 </button>
               </div>
 
               {/* Body - Scrollable Grid */}
-              <div className="p-8 overflow-y-auto custom-scrollbar">
+              <div className="p-4 md:p-8 overflow-y-auto scrollbar-hide">
                 {graveyardPartners.length === 0 ? (
                   <div className="text-center py-16">
                     <div className="text-7xl mb-6 opacity-20">🪦</div>

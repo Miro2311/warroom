@@ -48,7 +48,12 @@
       "Bash(git push:*)",
       "Bash(node apply-vote-fix.mjs:*)",
       "Bash(curl:*)",
-      "Bash(rm:*)"
+      "Bash(rm:*)",
+      "Bash(cmd.exe /c \"taskkill /PID 21272 /F\")",
+      "Bash(del /F aktuelledb.sql)",
+      "Bash(del /F frontend*.sql)",
+      "Bash(del /F frontend*.mjs)",
+      "Bash(del /F frontendMIGRATION-ANLEITUNG.md)"
     ],
     "deny": [],
     "ask": []

@@ -67,36 +67,64 @@ export default function DashboardPage() {
 
     setCreating(true)
 
-    // Generate invite code
-    const inviteCode = Math.random().toString(36).substring(2, 10).toUpperCase()
+    try {
+      // Generate invite code
+      const inviteCode = Math.random().toString(36).substring(2, 10).toUpperCase()
 
-    // Create group
-    const { data: groupData, error: groupError } = await supabase
-      .from('groups')
-      .insert({
-        name: newGroupName,
-        invite_code: inviteCode,
+      // Debug: Check auth session
+      const { data: { session } } = await supabase.auth.getSession()
+      console.log('=== GROUP CREATION DEBUG ===')
+      console.log('User from context:', user?.id)
+      console.log('Session exists:', !!session)
+      console.log('Session user:', session?.user?.id)
+      console.log('Access token exists:', !!session?.access_token)
+      console.log('Creating group with name:', newGroupName, 'and code:', inviteCode)
+
+      // Create group
+      const { data: groupData, error: groupError } = await supabase
+        .from('groups')
+        .insert({
+          name: newGroupName,
+          invite_code: inviteCode,
+        })
+        .select()
+        .single()
+
+      if (groupError) {
+        console.error('Error creating group:', groupError)
+        console.error('Full error details:', JSON.stringify(groupError, null, 2))
+        alert(`Failed to create group: ${groupError.message || 'Unknown error'}`)
+        setCreating(false)
+        return
+      }
+
+      console.log('Group created successfully:', groupData)
+
+      // Add creator as member
+      const { error: memberError } = await supabase.from('group_members').insert({
+        group_id: groupData.id,
+        user_id: user.id,
+        role: 'admin',
       })
-      .select()
-      .single()
 
-    if (groupError) {
-      console.error('Error creating group:', groupError)
+      if (memberError) {
+        console.error('Error adding member:', memberError)
+        alert(`Group created but failed to add you as member: ${memberError.message}`)
+        setCreating(false)
+        return
+      }
+
+      console.log('Member added successfully')
+
+      setNewGroupName('')
+      setShowCreateModal(false)
       setCreating(false)
-      return
+      loadGroups()
+    } catch (err) {
+      console.error('Unexpected error:', err)
+      alert(`Unexpected error: ${err instanceof Error ? err.message : 'Unknown error'}`)
+      setCreating(false)
     }
-
-    // Add creator as member
-    await supabase.from('group_members').insert({
-      group_id: groupData.id,
-      user_id: user.id,
-      role: 'admin',
-    })
-
-    setNewGroupName('')
-    setShowCreateModal(false)
-    setCreating(false)
-    loadGroups()
   }
 
   const joinGroup = async () => {

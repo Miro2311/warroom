@@ -56,6 +56,14 @@ export interface Asset {
   is_blurred: boolean;
 }
 
+export interface PartnerImage {
+  id: string;
+  partner_id: string;
+  image_url: string;
+  display_order: number;
+  created_at: string;
+}
+
 export interface Group {
   id: string;
   name: string;

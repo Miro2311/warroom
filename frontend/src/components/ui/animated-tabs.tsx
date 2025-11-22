@@ -61,8 +61,8 @@ export const AnimatedTabs: React.FC<AnimatedTabsProps> = ({
     >
       <div className={cn("w-full", className)}>
         {/* Tab List */}
-        <div className="border-b border-white/10 mb-6">
-          <div className="flex gap-1 relative">
+        <div className="border-b border-white/10 mb-4 md:mb-6">
+          <div className="flex gap-1 relative overflow-x-auto scrollbar-hide">
             {tabs.map((tab) => {
               const isActive = activeTab === tab.id;
               return (
@@ -70,8 +70,8 @@ export const AnimatedTabs: React.FC<AnimatedTabsProps> = ({
                   key={tab.id}
                   onClick={() => handleTabChange(tab.id)}
                   className={cn(
-                    "relative px-6 py-4 font-display font-bold text-sm uppercase tracking-wider transition-colors",
-                    "flex items-center gap-2",
+                    "relative px-4 md:px-6 py-3 md:py-4 font-display font-bold text-xs md:text-sm uppercase tracking-wider transition-colors",
+                    "flex items-center gap-2 whitespace-nowrap min-h-[44px]",
                     isActive
                       ? "text-holo-cyan"
                       : "text-white/50 hover:text-white/70"

@@ -96,7 +96,7 @@ export const PartnerDetailModal: React.FC<PartnerDetailModalProps> = ({
             {/* Modal Content */}
             <Dialog.Content asChild>
               <motion.div
-                className="fixed left-1/2 top-1/2 z-[110] w-[95vw] max-w-7xl h-[90vh] bg-deep-space border border-white/20 shadow-2xl overflow-hidden rounded-lg"
+                className="fixed left-1/2 top-1/2 z-[110] w-[95vw] md:w-[90vw] max-w-7xl h-[95vh] md:h-[90vh] bg-deep-space border border-white/20 shadow-2xl overflow-hidden rounded-lg"
                 initial={{ opacity: 0, scale: 0.95, x: "-50%", y: "-48%" }}
                 animate={{ opacity: 1, scale: 1, x: "-50%", y: "-50%" }}
                 exit={{ opacity: 0, scale: 0.95, x: "-50%", y: "-48%" }}
@@ -107,9 +107,9 @@ export const PartnerDetailModal: React.FC<PartnerDetailModalProps> = ({
                 }}
               >
                 {/* Header */}
-                <div className="border-b border-white/10 p-6 flex items-center justify-between bg-gradient-to-r from-white/5 to-transparent backdrop-blur-sm">
-                  <div className="flex-1">
-                    <div className="flex items-center gap-4">
+                <div className="border-b border-white/10 p-4 md:p-6 flex items-center justify-between bg-gradient-to-r from-white/5 to-transparent backdrop-blur-sm">
+                  <div className="flex-1 min-w-0">
+                    <div className="flex items-center gap-2 md:gap-4 flex-wrap">
                       {/* Always render Dialog.Title for accessibility */}
                       {isOwner ? (
                         <VisuallyHidden.Root>
@@ -118,7 +118,7 @@ export const PartnerDetailModal: React.FC<PartnerDetailModalProps> = ({
                           </Dialog.Title>
                         </VisuallyHidden.Root>
                       ) : (
-                        <Dialog.Title className="text-2xl font-display font-bold text-white uppercase tracking-wider">
+                        <Dialog.Title className="text-xl md:text-2xl font-display font-bold text-white uppercase tracking-wider">
                           {partner.nickname}
                         </Dialog.Title>
                       )}
@@ -129,7 +129,7 @@ export const PartnerDetailModal: React.FC<PartnerDetailModalProps> = ({
                           onChange={(e) =>
                             handleUpdate({ nickname: e.target.value })
                           }
-                          className="text-2xl font-display font-bold text-white uppercase tracking-wider bg-white/10 border border-white/20 px-3 py-1 rounded focus:outline-none focus:border-holo-cyan transition-colors"
+                          className="text-xl md:text-2xl font-display font-bold text-white uppercase tracking-wider bg-white/10 border border-white/20 px-2 md:px-3 py-1 rounded focus:outline-none focus:border-holo-cyan transition-colors w-full md:w-auto min-w-[200px]"
                           aria-label="Partner nickname"
                         />
                       )}
@@ -141,7 +141,7 @@ export const PartnerDetailModal: React.FC<PartnerDetailModalProps> = ({
                               status: e.target.value as RelationshipStatus,
                             })
                           }
-                          className="bg-white/10 border border-white/20 px-3 py-1 rounded text-white font-display text-sm focus:outline-none focus:border-holo-cyan transition-colors"
+                          className="bg-white/10 border border-white/20 px-2 md:px-3 py-2 rounded text-white font-display text-sm focus:outline-none focus:border-holo-cyan transition-colors min-h-[44px]"
                         >
                           {STATUS_OPTIONS.map((status) => (
                             <option key={status} value={status}>
@@ -158,11 +158,11 @@ export const PartnerDetailModal: React.FC<PartnerDetailModalProps> = ({
                     </Dialog.Description>
                   </div>
 
-                  <div className="flex items-center gap-3">
+                  <div className="flex items-center gap-2 md:gap-3">
                     {/* Close Button */}
                     <Dialog.Close asChild>
                       <motion.button
-                        className="w-10 h-10 rounded-full bg-white/10 hover:bg-white/20 flex items-center justify-center transition-colors"
+                        className="w-11 h-11 md:w-10 md:h-10 rounded-full bg-white/10 hover:bg-white/20 flex items-center justify-center transition-colors"
                         whileHover={{ scale: 1.1 }}
                         whileTap={{ scale: 0.95 }}
                       >
@@ -173,7 +173,7 @@ export const PartnerDetailModal: React.FC<PartnerDetailModalProps> = ({
                 </div>
 
                 {/* Tabs & Content */}
-                <div className="h-[calc(90vh-120px)] overflow-y-auto p-6">
+                <div className="h-[calc(95vh-120px)] md:h-[calc(90vh-120px)] overflow-y-auto p-4 md:p-6">
                   <AnimatedTabs
                     tabs={TABS}
                     value={activeTab}

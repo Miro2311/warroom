@@ -2,7 +2,6 @@
 
 import React, { useState, useEffect } from "react";
 import { createPortal } from "react-dom";
-import * as Dialog from "@radix-ui/react-dialog";
 import { PartnerNode, TimelineEvent, EventType, EventCategory, RedFlagSeverity } from "@/types";
 import { TimelineContainer, TimelineItem } from "@/components/ui/timeline-item";
 import { StatCard } from "@/components/ui/stat-card";
@@ -277,7 +276,10 @@ export const TimelineTab: React.FC<TimelineTabProps> = ({ partner }) => {
         </div>
         {isOwner && (
           <motion.button
-            onClick={() => setShowAddModal(true)}
+            onClick={() => {
+              setShowAddModal(true);
+              setSelectedEventType("date"); // Set default to "date" event type
+            }}
             className="flex items-center gap-2 px-4 py-2 bg-holo-cyan text-black font-display font-bold rounded hover:bg-holo-cyan/80 transition-colors"
             whileHover={{ scale: 1.05 }}
             whileTap={{ scale: 0.95 }}
@@ -379,7 +381,8 @@ export const TimelineTab: React.FC<TimelineTabProps> = ({ partner }) => {
         <AnimatePresence>
           {showAddModal && (
             <motion.div
-              className="fixed inset-0 z-[9999] flex items-center justify-center bg-black/80 backdrop-blur-sm"
+              className="fixed inset-0 bg-black/80 backdrop-blur-sm flex items-center justify-center"
+              style={{ zIndex: 999999 }}
               initial={{ opacity: 0 }}
               animate={{ opacity: 1 }}
               exit={{ opacity: 0 }}
@@ -389,17 +392,18 @@ export const TimelineTab: React.FC<TimelineTabProps> = ({ partner }) => {
                 resetForm();
               }}
             >
+              {/* Modal Content */}
               <motion.div
-                className="bg-deep-space border border-white/20 rounded-lg p-6 w-full max-w-2xl max-h-[90vh] overflow-y-auto relative z-[10000]"
+                className="bg-deep-space border border-white/20 rounded-lg p-6 w-full max-w-2xl max-h-[90vh] overflow-y-auto relative"
                 initial={{ scale: 0.9, opacity: 0 }}
                 animate={{ scale: 1, opacity: 1 }}
                 exit={{ scale: 0.9, opacity: 0 }}
                 onClick={(e) => e.stopPropagation()}
               >
               <div className="flex items-center justify-between mb-6">
-                <Dialog.Title className="text-2xl font-display font-bold text-white">
+                <h2 className="text-2xl font-display font-bold text-white">
                   {selectedEventType ? `Add ${EVENT_TYPE_CONFIG[selectedEventType].label}` : "Choose Event Type"}
-                </Dialog.Title>
+                </h2>
                 <button
                   onClick={() => {
                     setShowAddModal(false);
@@ -435,9 +439,28 @@ export const TimelineTab: React.FC<TimelineTabProps> = ({ partner }) => {
                 </div>
               ) : (
                 <div className="space-y-4">
+                  {/* Event Type Selector */}
+                  <div>
+                    <label className="text-xs font-mono text-white/50 uppercase tracking-wider block mb-2">
+                      Event Type
+                    </label>
+                    <select
+                      value={selectedEventType || "date"}
+                      onChange={(e) => setSelectedEventType(e.target.value as EventType)}
+                      className="w-full bg-deep-space border border-white/20 px-4 py-3 rounded text-white font-display focus:outline-none focus:border-holo-cyan transition-colors"
+                      style={{ backgroundColor: '#0A0A0F', color: '#FFFFFF' }}
+                    >
+                      {Object.entries(EVENT_TYPE_CONFIG).map(([type, config]) => (
+                        <option key={type} value={type} style={{ backgroundColor: '#0A0A0F', color: '#FFFFFF' }}>
+                          {config.label}
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+
                   {/* Title */}
                   <div>
-                    <label className="text-xs font-mono text-white/50 uppercase tracking-wider">
+                    <label className="text-xs font-mono text-white/50 uppercase tracking-wider block mb-2">
                       Title *
                     </label>
                     <input
@@ -446,12 +469,13 @@ export const TimelineTab: React.FC<TimelineTabProps> = ({ partner }) => {
                       onChange={(e) => setNewEvent({ ...newEvent, title: e.target.value })}
                       className="w-full bg-white/10 border border-white/20 px-4 py-3 rounded text-white font-mono focus:outline-none focus:border-holo-cyan transition-colors"
                       placeholder={`e.g. ${selectedEventType === 'date' ? 'Dinner at Italian place' : selectedEventType === 'expense' ? 'Birthday gift' : selectedEventType === 'red_flag' ? 'Cancelled plans last minute' : 'Quick note'}`}
+                      autoFocus
                     />
                   </div>
 
                   {/* Description */}
                   <div>
-                    <label className="text-xs font-mono text-white/50 uppercase tracking-wider">
+                    <label className="text-xs font-mono text-white/50 uppercase tracking-wider block mb-2">
                       Description (optional)
                     </label>
                     <textarea
@@ -465,7 +489,7 @@ export const TimelineTab: React.FC<TimelineTabProps> = ({ partner }) => {
 
                   {/* Date */}
                   <div>
-                    <label className="text-xs font-mono text-white/50 uppercase tracking-wider">
+                    <label className="text-xs font-mono text-white/50 uppercase tracking-wider block mb-2">
                       Date
                     </label>
                     <input
@@ -473,6 +497,7 @@ export const TimelineTab: React.FC<TimelineTabProps> = ({ partner }) => {
                       value={newEvent.date}
                       onChange={(e) => setNewEvent({ ...newEvent, date: e.target.value })}
                       className="w-full bg-white/10 border border-white/20 px-4 py-3 rounded text-white font-mono focus:outline-none focus:border-holo-cyan transition-colors"
+                      style={{ colorScheme: 'dark' }}
                     />
                   </div>
 
@@ -481,7 +506,7 @@ export const TimelineTab: React.FC<TimelineTabProps> = ({ partner }) => {
                     <>
                       <div className="grid grid-cols-2 gap-4">
                         <div>
-                          <label className="text-xs font-mono text-white/50 uppercase tracking-wider">
+                          <label className="text-xs font-mono text-white/50 uppercase tracking-wider block mb-2">
                             Amount ($)
                           </label>
                           <input
@@ -494,16 +519,17 @@ export const TimelineTab: React.FC<TimelineTabProps> = ({ partner }) => {
                           />
                         </div>
                         <div>
-                          <label className="text-xs font-mono text-white/50 uppercase tracking-wider">
+                          <label className="text-xs font-mono text-white/50 uppercase tracking-wider block mb-2">
                             Category
                           </label>
                           <select
                             value={newEvent.category}
                             onChange={(e) => setNewEvent({ ...newEvent, category: e.target.value as EventCategory })}
                             className="w-full bg-white/10 border border-white/20 px-4 py-3 rounded text-white font-display focus:outline-none focus:border-holo-cyan transition-colors"
+                            style={{ backgroundColor: '#0A0A0F', color: '#FFFFFF' }}
                           >
                             {CATEGORIES.map((cat) => (
-                              <option key={cat} value={cat}>{cat}</option>
+                              <option key={cat} value={cat} style={{ backgroundColor: '#0A0A0F', color: '#FFFFFF' }}>{cat}</option>
                             ))}
                           </select>
                         </div>
@@ -513,16 +539,17 @@ export const TimelineTab: React.FC<TimelineTabProps> = ({ partner }) => {
 
                   {selectedEventType === "red_flag" && (
                     <div>
-                      <label className="text-xs font-mono text-white/50 uppercase tracking-wider">
+                      <label className="text-xs font-mono text-white/50 uppercase tracking-wider block mb-2">
                         Severity
                       </label>
                       <select
                         value={newEvent.severity}
                         onChange={(e) => setNewEvent({ ...newEvent, severity: e.target.value as RedFlagSeverity })}
                         className="w-full bg-white/10 border border-white/20 px-4 py-3 rounded text-white font-display focus:outline-none focus:border-holo-cyan transition-colors"
+                        style={{ backgroundColor: '#0A0A0F', color: '#FFFFFF' }}
                       >
                         {SEVERITIES.map((sev) => (
-                          <option key={sev} value={sev}>{sev}</option>
+                          <option key={sev} value={sev} style={{ backgroundColor: '#0A0A0F', color: '#FFFFFF' }}>{sev}</option>
                         ))}
                       </select>
                     </div>
@@ -530,7 +557,7 @@ export const TimelineTab: React.FC<TimelineTabProps> = ({ partner }) => {
 
                   {selectedEventType === "intimacy" && (
                     <div>
-                      <label className="text-xs font-mono text-white/50 uppercase tracking-wider">
+                      <label className="text-xs font-mono text-white/50 uppercase tracking-wider block mb-2">
                         Intimacy Change
                       </label>
                       <input
@@ -560,6 +587,7 @@ export const TimelineTab: React.FC<TimelineTabProps> = ({ partner }) => {
                   <div className="flex gap-3 pt-4">
                     <motion.button
                       onClick={() => {
+                        setShowAddModal(false);
                         setSelectedEventType(null);
                         resetForm();
                       }}
@@ -568,7 +596,7 @@ export const TimelineTab: React.FC<TimelineTabProps> = ({ partner }) => {
                       whileTap={{ scale: 0.98 }}
                       transition={{ type: "tween", duration: 0.2 }}
                     >
-                      Back
+                      Cancel
                     </motion.button>
                     <motion.button
                       onClick={handleAddEvent}

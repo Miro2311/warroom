@@ -36,7 +36,6 @@ import {
   getBetMasterVotes,
   voteForBetMaster,
   electBetMaster,
-  generateWeeklyBets,
   getGroupLeaderboard,
   getWagers,
 } from "@/services/bettingService";
@@ -132,15 +131,6 @@ export const BettingStudioTab: React.FC<BettingStudioTabProps> = ({
 
       // Load wagers for each bet
       await loadBetWagers(allBets);
-
-      // Generate weekly bets if needed
-      const activeBets = allBets.filter((b) => b.status === "open");
-      if (activeBets.length < 3) {
-        await generateWeeklyBets(groupId);
-        const updatedBets = await getBets(groupId);
-        setBets(updatedBets);
-        await loadBetWagers(updatedBets);
-      }
     } catch (error: any) {
       // Silently handle table not existing yet
       if (error?.code === '42P01' || error?.message?.includes('relation') || error?.message?.includes('does not exist')) {

@@ -2,14 +2,16 @@
 
 import { useAuth } from '@/contexts/AuthContext'
 import { useRouter } from 'next/navigation'
-import { LogOut, LayoutGrid, Trophy, PlusCircle } from 'lucide-react'
-import { motion } from 'framer-motion'
+import { LogOut, LayoutGrid, Trophy, PlusCircle, Menu, X } from 'lucide-react'
+import { motion, AnimatePresence } from 'framer-motion'
 import { useStore } from '@/store/useStore'
+import { useState } from 'react'
 
 export function DashboardHeader() {
   const { user, signOut } = useAuth()
   const router = useRouter()
   const partners = useStore(state => state.partners)
+  const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false)
 
   const handleBackToDashboard = () => {
     router.push('/dashboard')
@@ -19,19 +21,32 @@ export function DashboardHeader() {
   const graveyardCount = partners.filter(p => p.status === 'Graveyard').length
 
   return (
-    <div className="absolute top-4 left-4 right-4 z-20 flex items-center justify-between pointer-events-auto">
-      <div className="flex items-center gap-4">
-        <h1 className="text-2xl font-bold text-white font-display drop-shadow-lg tracking-wider">
-          RWR <span className="text-xs text-gray-400 font-mono font-normal">v2.0</span>
-        </h1>
-        {user && (
-          <div className="text-sm text-gray-400 font-mono">
-            {user.email}
-          </div>
-        )}
-      </div>
+    <div className="absolute top-4 left-4 right-4 z-20 pointer-events-auto">
+      <div className="flex items-center justify-between">
+        <div className="flex items-center gap-2 md:gap-4">
+          <h1 className="text-xl md:text-2xl font-bold text-white font-display drop-shadow-lg tracking-wider">
+            RWR <span className="text-xs text-gray-400 font-mono font-normal">v2.0</span>
+          </h1>
+          {user && (
+            <div className="hidden sm:block text-sm text-gray-400 font-mono">
+              {user.email}
+            </div>
+          )}
+        </div>
 
-      <div className="flex items-center gap-3">
+        {/* Mobile Menu Toggle */}
+        <motion.button
+          onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
+          whileHover={{ scale: 1.05 }}
+          whileTap={{ scale: 0.95 }}
+          className="md:hidden flex items-center justify-center w-11 h-11 bg-white/5 hover:bg-white/10 border border-white/20 rounded text-white transition-colors"
+          aria-label="Toggle menu"
+        >
+          {isMobileMenuOpen ? <X className="w-5 h-5" /> : <Menu className="w-5 h-5" />}
+        </motion.button>
+
+        {/* Desktop Menu */}
+        <div className="hidden md:flex items-center gap-3">
         {/* Add Planet Button */}
         <motion.button
           onClick={() => {
@@ -230,7 +245,95 @@ export function DashboardHeader() {
           <LogOut className="h-4 w-4" />
           LOGOUT
         </motion.button>
+        </div>
       </div>
+
+      {/* Mobile Menu Dropdown */}
+      <AnimatePresence>
+        {isMobileMenuOpen && (
+          <motion.div
+            initial={{ opacity: 0, y: -20, height: 0 }}
+            animate={{ opacity: 1, y: 0, height: 'auto' }}
+            exit={{ opacity: 0, y: -20, height: 0 }}
+            transition={{ duration: 0.2 }}
+            className="md:hidden mt-4 bg-deep-void/95 backdrop-blur-md border border-white/20 rounded-lg overflow-hidden"
+          >
+            <div className="flex flex-col gap-2 p-3">
+              {/* Add Planet Button */}
+              <motion.button
+                onClick={() => {
+                  window.dispatchEvent(new CustomEvent('open-add-planet-modal'))
+                  setIsMobileMenuOpen(false)
+                }}
+                whileTap={{ scale: 0.95 }}
+                className="flex items-center gap-3 w-full px-4 py-3 bg-holo-cyan/20 hover:bg-holo-cyan/30 border border-holo-cyan/50 rounded text-holo-cyan font-mono text-sm transition-colors"
+              >
+                <PlusCircle className="w-5 h-5" />
+                <span>ADD PLANET</span>
+              </motion.button>
+
+              {/* Betting Studio Button */}
+              <motion.button
+                onClick={() => {
+                  window.dispatchEvent(new CustomEvent('open-betting-studio'))
+                  setIsMobileMenuOpen(false)
+                }}
+                whileTap={{ scale: 0.95 }}
+                className="flex items-center gap-3 w-full px-4 py-3 bg-black/60 hover:bg-black/70 border border-yellow-400/40 rounded text-yellow-400 font-mono text-sm transition-colors"
+              >
+                <Trophy className="w-5 h-5" />
+                <span>BETTING STUDIO</span>
+              </motion.button>
+
+              {/* Graveyard Button */}
+              <motion.button
+                onClick={() => {
+                  window.dispatchEvent(new CustomEvent('open-graveyard-panel'))
+                  setIsMobileMenuOpen(false)
+                }}
+                whileTap={{ scale: 0.95 }}
+                className="relative flex items-center gap-3 w-full px-4 py-3 bg-black/60 hover:bg-black/70 border border-toxic-green/40 rounded text-toxic-green font-mono text-sm transition-colors"
+              >
+                <div className="flex gap-1">
+                  <div className="text-sm">🦅</div>
+                </div>
+                <span>GRAVEYARD</span>
+                {graveyardCount > 0 && (
+                  <div className="ml-auto w-6 h-6 bg-toxic-green/20 border border-toxic-green rounded-full flex items-center justify-center text-xs font-bold text-toxic-green">
+                    {graveyardCount}
+                  </div>
+                )}
+              </motion.button>
+
+              {/* Systems Button */}
+              <motion.button
+                onClick={() => {
+                  handleBackToDashboard()
+                  setIsMobileMenuOpen(false)
+                }}
+                whileTap={{ scale: 0.95 }}
+                className="flex items-center gap-3 w-full px-4 py-3 bg-white/5 hover:bg-white/10 border border-white/20 rounded text-white font-mono text-sm transition-colors"
+              >
+                <LayoutGrid className="w-5 h-5" />
+                <span>SYSTEMS</span>
+              </motion.button>
+
+              {/* Logout Button */}
+              <motion.button
+                onClick={() => {
+                  signOut()
+                  setIsMobileMenuOpen(false)
+                }}
+                whileTap={{ scale: 0.95 }}
+                className="flex items-center gap-3 w-full px-4 py-3 bg-white/5 hover:bg-white/10 border border-white/20 rounded text-white font-mono text-sm transition-colors"
+              >
+                <LogOut className="w-5 h-5" />
+                <span>LOGOUT</span>
+              </motion.button>
+            </div>
+          </motion.div>
+        )}
+      </AnimatePresence>
     </div>
   )
 }

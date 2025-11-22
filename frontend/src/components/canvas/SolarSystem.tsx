@@ -149,27 +149,33 @@ function WarRoomFlow() {
   // Load data from Supabase
   useLoadData();
 
-  // Center on current user's sun when component first loads (only once)
+  // Center on current user's sun when nodes are ready
   useEffect(() => {
-    if (user && !loading && allGroupUsers.length > 0 && nodes.length > 0 && !hasInitialZoomedRef.current) {
-      const timer = setTimeout(() => {
-        // Find current user's sun
-        const currentUserSun = nodes.find(n => n.id === `sun-${user.id}`);
-        if (currentUserSun) {
-          console.log('Initial zoom to user sun:', currentUserSun.position);
-          fitView({
-            nodes: [currentUserSun],
-            duration: 800,
-            padding: 0.4,
-            minZoom: 0.3,
-            maxZoom: 0.8,
+    if (user && !loading && nodes.length > 0 && !hasInitialZoomedRef.current) {
+      // Find current user's sun
+      const currentUserSun = nodes.find(n => n.id === `sun-${user.id}`);
+
+      if (currentUserSun) {
+        // Use requestAnimationFrame to ensure ReactFlow is fully rendered
+        requestAnimationFrame(() => {
+          requestAnimationFrame(() => {
+            console.log('🎯 Centering on user sun at:', currentUserSun.position);
+            console.log('📊 Total nodes:', nodes.length);
+
+            fitView({
+              nodes: [currentUserSun],
+              duration: 800,
+              padding: 0.5,
+              minZoom: 0.4,
+              maxZoom: 0.8,
+            });
+
+            hasInitialZoomedRef.current = true;
           });
-          hasInitialZoomedRef.current = true; // Mark as done
-        }
-      }, 500); // Longer delay to ensure nodes are rendered
-      return () => clearTimeout(timer);
+        });
+      }
     }
-  }, [user, loading, allGroupUsers, nodes, fitView]);
+  }, [user, loading, nodes, fitView]);
 
   // Listen for graveyard panel open event from header
   useEffect(() => {
@@ -201,7 +207,7 @@ function WarRoomFlow() {
     return () => window.removeEventListener('open-add-planet-modal', handleOpenAddPlanet);
   }, []);
 
-  // Load group members for betting studio AND multi-sun galaxy view
+  // Load group members and organize partners by user
   useEffect(() => {
     const loadGroupMembers = async () => {
       if (!currentGroupId) return;
@@ -219,25 +225,23 @@ function WarRoomFlow() {
         setGroupMembers(members);
         setAllGroupUsers(members);
 
-        // Load partners for each user in the group
+        // Use partners from store (already loaded ALL partners in group by useLoadData)
+        // Group them by user_id for multi-sun view
         const partnersMap = new Map<string, any[]>();
 
         for (const member of members) {
-          const { data: userPartners } = await supabase
-            .from('partners')
-            .select('*')
-            .eq('user_id', member.id)
-            .eq('group_id', currentGroupId);
-
-          partnersMap.set(member.id, userPartners || []);
+          const memberPartners = partners.filter(p => p.user_id === member.id);
+          partnersMap.set(member.id, memberPartners);
         }
 
         setAllGroupPartnersMap(partnersMap);
+        console.log('Group members loaded:', members.length);
+        console.log('Partners map:', partnersMap);
       }
     };
 
     loadGroupMembers();
-  }, [currentGroupId]);
+  }, [currentGroupId, partners]);
 
   const onNodeClick = useCallback(
     (event: React.MouseEvent, node: Node) => {
@@ -812,18 +816,35 @@ function WarRoomFlow() {
         onNodeClick={onNodeClick}
         onPaneClick={onPaneClick}
         nodeTypes={nodeTypes}
-        defaultViewport={{ x: 0, y: 0, zoom: 0.6 }}
+        fitView
+        fitViewOptions={{
+          padding: 0.5,
+          minZoom: 0.4,
+          maxZoom: 0.8,
+        }}
         minZoom={0.1}
         maxZoom={4}
         proOptions={{ hideAttribution: true }}
-        className="bg-deep-space"
+        className="bg-deep-space touch-pan"
+        panOnScroll={true}
+        panOnDrag={true}
+        zoomOnScroll={true}
+        zoomOnPinch={true}
+        zoomOnDoubleClick={false}
+        preventScrolling={true}
+        selectNodesOnDrag={false}
       >
         {/* Galaxy Background with stars and nebulae */}
         <GalaxyBackground />
 
         {/* Subtle grid overlay */}
         <Background color="#1A1A2E" gap={40} size={1} />
-        <Controls className="bg-glass-panel border-white/10 fill-holo-cyan" />
+        <Controls
+          className="bg-glass-panel border-white/10 fill-holo-cyan [&>button]:w-11 [&>button]:h-11 [&>button]:bg-glass-panel [&>button]:border [&>button]:border-white/10"
+          showZoom={true}
+          showFitView={true}
+          showInteractive={false}
+        />
 
         {/* Warp Animation Overlay */}
         <AnimatePresence>
