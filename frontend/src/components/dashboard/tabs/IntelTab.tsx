@@ -17,6 +17,7 @@ import {
   Shield,
   X,
   Send,
+  Trash2,
 } from "lucide-react";
 import { useAuth } from "@/contexts/AuthContext";
 import { supabase } from "@/lib/supabase";
@@ -174,6 +175,52 @@ export const IntelTab: React.FC<IntelTabProps> = ({ partner }) => {
     }
   };
 
+  const handleDeleteRedFlag = async (flagId: string, reportedById: string) => {
+    // Only the partner owner can delete red flags (even if reported by others)
+    const isOwner = user?.id === partner.user_id;
+
+    if (!isOwner) {
+      console.error('Not authorized to delete red flags - only partner owner can delete');
+      return;
+    }
+
+    try {
+      const { error } = await supabase
+        .from('partner_red_flags')
+        .delete()
+        .eq('id', flagId);
+
+      if (error) throw error;
+
+      setRedFlags(redFlags.filter(f => f.id !== flagId));
+    } catch (error) {
+      console.error('Error deleting red flag:', error);
+    }
+  };
+
+  const handleDeleteNote = async (noteId: string, authorId: string) => {
+    // Only the partner owner can delete notes (even if written by others)
+    const isOwner = user?.id === partner.user_id;
+
+    if (!isOwner) {
+      console.error('Not authorized to delete notes - only partner owner can delete');
+      return;
+    }
+
+    try {
+      const { error } = await supabase
+        .from('partner_notes')
+        .delete()
+        .eq('id', noteId);
+
+      if (error) throw error;
+
+      setNotes(notes.filter(n => n.id !== noteId));
+    } catch (error) {
+      console.error('Error deleting note:', error);
+    }
+  };
+
   const loadRatings = async () => {
     try {
       const { data: ratingsData, error: ratingsError } = await supabase
@@ -298,51 +345,49 @@ export const IntelTab: React.FC<IntelTabProps> = ({ partner }) => {
     if (!note) return;
 
     try {
-      // Check if user already voted
-      const { data: existingVote } = await supabase
+      // Check if user already voted (using maybeSingle to avoid error when no vote exists)
+      const { data: existingVote, error: voteError } = await supabase
         .from('partner_note_votes')
         .select('*')
         .eq('note_id', noteId)
         .eq('user_id', user.id)
-        .single();
+        .maybeSingle();
 
-      let upvoteDelta = 0;
-      let downvoteDelta = 0;
+      if (voteError) {
+        console.error('Error checking existing vote:', voteError);
+        return;
+      }
 
       if (existingVote) {
         // User already voted
         if (existingVote.vote_type === voteType) {
-          // Clicking the same vote - remove it
-          await supabase
+          // Clicking the same vote - remove it (toggle off)
+          const { error: deleteError } = await supabase
             .from('partner_note_votes')
             .delete()
             .eq('note_id', noteId)
             .eq('user_id', user.id);
 
-          if (voteType === 'up') {
-            upvoteDelta = -1;
-          } else {
-            downvoteDelta = -1;
+          if (deleteError) {
+            console.error('Error removing vote:', deleteError);
+            return;
           }
         } else {
-          // Switching vote
-          await supabase
+          // Switching vote (up to down or down to up)
+          const { error: updateError } = await supabase
             .from('partner_note_votes')
             .update({ vote_type: voteType })
             .eq('note_id', noteId)
             .eq('user_id', user.id);
 
-          if (voteType === 'up') {
-            upvoteDelta = 1;
-            downvoteDelta = -1;
-          } else {
-            upvoteDelta = -1;
-            downvoteDelta = 1;
+          if (updateError) {
+            console.error('Error switching vote:', updateError);
+            return;
           }
         }
       } else {
-        // New vote
-        await supabase
+        // New vote - insert with error handling for unique constraint
+        const { error: insertError } = await supabase
           .from('partner_note_votes')
           .insert({
             note_id: noteId,
@@ -350,19 +395,34 @@ export const IntelTab: React.FC<IntelTabProps> = ({ partner }) => {
             vote_type: voteType,
           });
 
-        if (voteType === 'up') {
-          upvoteDelta = 1;
-        } else {
-          downvoteDelta = 1;
+        if (insertError) {
+          // If unique constraint violation, it means another request already inserted
+          // Just reload to get the latest state
+          console.error('Error inserting vote:', insertError);
+          await loadNotes();
+          return;
         }
       }
 
-      // Update the note's vote counts
+      // Recalculate vote counts from the votes table to ensure accuracy
+      const { count: upvoteCount } = await supabase
+        .from('partner_note_votes')
+        .select('*', { count: 'exact', head: true })
+        .eq('note_id', noteId)
+        .eq('vote_type', 'up');
+
+      const { count: downvoteCount } = await supabase
+        .from('partner_note_votes')
+        .select('*', { count: 'exact', head: true })
+        .eq('note_id', noteId)
+        .eq('vote_type', 'down');
+
+      // Update the note's vote counts with accurate values
       await supabase
         .from('partner_notes')
         .update({
-          upvotes: note.upvotes + upvoteDelta,
-          downvotes: note.downvotes + downvoteDelta,
+          upvotes: upvoteCount || 0,
+          downvotes: downvoteCount || 0,
         })
         .eq('id', noteId);
 
@@ -370,6 +430,8 @@ export const IntelTab: React.FC<IntelTabProps> = ({ partner }) => {
       await loadNotes();
     } catch (error) {
       console.error('Error voting:', error);
+      // Reload to ensure UI is in sync with database
+      await loadNotes();
     }
   };
 
@@ -702,40 +764,58 @@ export const IntelTab: React.FC<IntelTabProps> = ({ partner }) => {
               No red flags reported yet.
             </div>
           ) : (
-            redFlags.map((flag, index) => (
-              <motion.div
-                key={flag.id}
-                className="p-4 rounded bg-white/5 border border-white/10"
-                initial={{ opacity: 0, x: -20 }}
-                animate={{ opacity: 1, x: 0 }}
-                transition={{ delay: 0.2 + index * 0.1 }}
-              >
-                <div className="flex items-start justify-between mb-2">
-                  <div className="flex items-center gap-2">
-                    <AlertTriangle
-                      className={`w-4 h-4 ${
-                        flag.severity === "high"
-                          ? "text-simp-red"
-                          : flag.severity === "medium"
-                          ? "text-yellow-400"
-                          : "text-white/50"
-                      }`}
-                    />
-                    <AnimatedBadge variant={severityVariant[flag.severity]} size="sm">
-                      {flag.severity}
-                    </AnimatedBadge>
+            redFlags.map((flag, index) => {
+              // Only partner owner can delete red flags
+              const canDelete = user?.id === partner.user_id;
+
+              return (
+                <motion.div
+                  key={flag.id}
+                  className="p-4 rounded bg-white/5 border border-white/10 group relative"
+                  initial={{ opacity: 0, x: -20 }}
+                  animate={{ opacity: 1, x: 0 }}
+                  transition={{ delay: 0.2 + index * 0.1 }}
+                >
+                  <div className="flex items-start justify-between mb-2">
+                    <div className="flex items-center gap-2">
+                      <AlertTriangle
+                        className={`w-4 h-4 ${
+                          flag.severity === "high"
+                            ? "text-simp-red"
+                            : flag.severity === "medium"
+                            ? "text-yellow-400"
+                            : "text-white/50"
+                        }`}
+                      />
+                      <AnimatedBadge variant={severityVariant[flag.severity]} size="sm">
+                        {flag.severity}
+                      </AnimatedBadge>
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <span className="text-xs font-mono text-white/50">
+                        {getRelativeTime(flag.created_at)}
+                      </span>
+                      {canDelete && (
+                        <motion.button
+                          onClick={() => handleDeleteRedFlag(flag.id, flag.reported_by_id)}
+                          className="w-6 h-6 rounded bg-simp-red/20 text-simp-red opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center hover:bg-simp-red/30"
+                          whileHover={{ scale: 1.1 }}
+                          whileTap={{ scale: 0.9 }}
+                          title="Delete red flag"
+                        >
+                          <Trash2 className="w-3 h-3" />
+                        </motion.button>
+                      )}
+                    </div>
                   </div>
-                  <span className="text-xs font-mono text-white/50">
-                    {getRelativeTime(flag.created_at)}
-                  </span>
-                </div>
-                <p className="text-sm text-white mb-2">{flag.description}</p>
-                <div className="text-xs text-white/50 font-mono">
-                  Reported by {flag.reported_by_name}
-                  {flag.reported_by_id === user?.id && " (You)"}
-                </div>
-              </motion.div>
-            ))
+                  <p className="text-sm text-white mb-2">{flag.description}</p>
+                  <div className="text-xs text-white/50 font-mono">
+                    Reported by {flag.reported_by_name}
+                    {flag.reported_by_id === user?.id && " (You)"}
+                  </div>
+                </motion.div>
+              );
+            })
           )}
         </div>
       </motion.div>
@@ -816,75 +896,91 @@ export const IntelTab: React.FC<IntelTabProps> = ({ partner }) => {
               No notes yet. Share the first insight!
             </div>
           ) : (
-            notes.map((note, index) => (
-              <motion.div
-                key={note.id}
-                className="p-4 rounded bg-white/5 border border-white/10"
-                initial={{ opacity: 0, x: -20 }}
-                animate={{ opacity: 1, x: 0 }}
-                transition={{ delay: 0.3 + index * 0.1 }}
-              >
-                <div className="flex items-start justify-between mb-2">
-                  <div className="flex items-center gap-2">
-                    <div className="w-8 h-8 rounded-full bg-gradient-to-br from-toxic-green to-holo-cyan flex items-center justify-center text-xs font-bold text-black">
-                      {note.author_name.charAt(0).toUpperCase()}
+            notes.map((note, index) => {
+              // Only the partner owner can delete notes
+              const canDelete = user?.id === partner.user_id;
+
+              return (
+                <motion.div
+                  key={note.id}
+                  className="p-4 rounded bg-white/5 border border-white/10 group relative"
+                  initial={{ opacity: 0, x: -20 }}
+                  animate={{ opacity: 1, x: 0 }}
+                  transition={{ delay: 0.3 + index * 0.1 }}
+                >
+                  <div className="flex items-start justify-between mb-2">
+                    <div className="flex items-center gap-2">
+                      <div className="w-8 h-8 rounded-full bg-gradient-to-br from-toxic-green to-holo-cyan flex items-center justify-center text-xs font-bold text-black">
+                        {note.author_name.charAt(0).toUpperCase()}
+                      </div>
+                      <div>
+                        <span className="text-sm font-display font-bold text-white">
+                          {note.author_name}
+                          {note.author_id === user?.id && (
+                            <span className="text-xs text-toxic-green ml-2">(You)</span>
+                          )}
+                        </span>
+                        <span className="text-xs text-white/50 ml-2">
+                          {getRelativeTime(note.created_at)}
+                        </span>
+                      </div>
                     </div>
-                    <div>
-                      <span className="text-sm font-display font-bold text-white">
-                        {note.author_name}
-                        {note.author_id === user?.id && (
-                          <span className="text-xs text-toxic-green ml-2">(You)</span>
-                        )}
-                      </span>
-                      <span className="text-xs text-white/50 ml-2">
-                        {getRelativeTime(note.created_at)}
-                      </span>
+                    <div className="flex items-center gap-2">
+                      <motion.button
+                        className={`flex items-center gap-1 px-2 py-1 rounded transition-colors ${
+                          note.user_vote === 'up'
+                            ? 'bg-toxic-green/40 border border-toxic-green'
+                            : 'bg-toxic-green/20 hover:bg-toxic-green/30'
+                        }`}
+                        whileHover={{ scale: 1.1 }}
+                        whileTap={{ scale: 0.9 }}
+                        onClick={() => handleVote(note.id, 'up')}
+                      >
+                        <ThumbsUp
+                          className={`w-3 h-3 ${
+                            note.user_vote === 'up' ? 'text-toxic-green fill-toxic-green' : 'text-toxic-green'
+                          }`}
+                        />
+                        <span className="text-xs font-mono text-toxic-green">
+                          {note.upvotes}
+                        </span>
+                      </motion.button>
+                      <motion.button
+                        className={`flex items-center gap-1 px-2 py-1 rounded transition-colors ${
+                          note.user_vote === 'down'
+                            ? 'bg-simp-red/40 border border-simp-red'
+                            : 'bg-simp-red/20 hover:bg-simp-red/30'
+                        }`}
+                        whileHover={{ scale: 1.1 }}
+                        whileTap={{ scale: 0.9 }}
+                        onClick={() => handleVote(note.id, 'down')}
+                      >
+                        <ThumbsDown
+                          className={`w-3 h-3 ${
+                            note.user_vote === 'down' ? 'text-simp-red fill-simp-red' : 'text-simp-red'
+                          }`}
+                        />
+                        <span className="text-xs font-mono text-simp-red">
+                          {note.downvotes}
+                        </span>
+                      </motion.button>
+                      {canDelete && (
+                        <motion.button
+                          onClick={() => handleDeleteNote(note.id, note.author_id)}
+                          className="w-6 h-6 rounded bg-simp-red/20 text-simp-red opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center hover:bg-simp-red/30"
+                          whileHover={{ scale: 1.1 }}
+                          whileTap={{ scale: 0.9 }}
+                          title="Delete note"
+                        >
+                          <Trash2 className="w-3 h-3" />
+                        </motion.button>
+                      )}
                     </div>
                   </div>
-                  <div className="flex items-center gap-2">
-                    <motion.button
-                      className={`flex items-center gap-1 px-2 py-1 rounded transition-colors ${
-                        note.user_vote === 'up'
-                          ? 'bg-toxic-green/40 border border-toxic-green'
-                          : 'bg-toxic-green/20 hover:bg-toxic-green/30'
-                      }`}
-                      whileHover={{ scale: 1.1 }}
-                      whileTap={{ scale: 0.9 }}
-                      onClick={() => handleVote(note.id, 'up')}
-                    >
-                      <ThumbsUp
-                        className={`w-3 h-3 ${
-                          note.user_vote === 'up' ? 'text-toxic-green fill-toxic-green' : 'text-toxic-green'
-                        }`}
-                      />
-                      <span className="text-xs font-mono text-toxic-green">
-                        {note.upvotes}
-                      </span>
-                    </motion.button>
-                    <motion.button
-                      className={`flex items-center gap-1 px-2 py-1 rounded transition-colors ${
-                        note.user_vote === 'down'
-                          ? 'bg-simp-red/40 border border-simp-red'
-                          : 'bg-simp-red/20 hover:bg-simp-red/30'
-                      }`}
-                      whileHover={{ scale: 1.1 }}
-                      whileTap={{ scale: 0.9 }}
-                      onClick={() => handleVote(note.id, 'down')}
-                    >
-                      <ThumbsDown
-                        className={`w-3 h-3 ${
-                          note.user_vote === 'down' ? 'text-simp-red fill-simp-red' : 'text-simp-red'
-                        }`}
-                      />
-                      <span className="text-xs font-mono text-simp-red">
-                        {note.downvotes}
-                      </span>
-                    </motion.button>
-                  </div>
-                </div>
-                <p className="text-sm text-white/90">{note.content}</p>
-              </motion.div>
-            ))
+                  <p className="text-sm text-white/90">{note.content}</p>
+                </motion.div>
+              );
+            })
           )}
         </div>
       </motion.div>

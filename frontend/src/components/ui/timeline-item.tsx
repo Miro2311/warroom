@@ -13,6 +13,7 @@ interface TimelineItemProps {
   isLast?: boolean;
   metadata?: React.ReactNode;
   className?: string;
+  children?: React.ReactNode;
 }
 
 const variantStyles = {
@@ -43,12 +44,13 @@ export const TimelineItem: React.FC<TimelineItemProps> = ({
   isLast = false,
   metadata,
   className,
+  children,
 }) => {
   const styles = variantStyles[variant];
 
   return (
     <motion.div
-      className={cn("relative flex gap-4 pb-8", className)}
+      className={cn("relative flex gap-4 pb-8 group", className)}
       initial={{ opacity: 0, x: -20 }}
       animate={{ opacity: 1, x: 0 }}
       transition={{
@@ -87,7 +89,7 @@ export const TimelineItem: React.FC<TimelineItemProps> = ({
       </motion.div>
 
       {/* Content */}
-      <div className="flex-1 pt-1">
+      <div className="flex-1 pt-1 relative">
         <div className="flex items-start justify-between gap-4 mb-2">
           <h4 className="text-base font-display font-bold text-white">
             {title}
@@ -110,6 +112,8 @@ export const TimelineItem: React.FC<TimelineItemProps> = ({
             {metadata}
           </motion.div>
         )}
+
+        {children}
       </div>
     </motion.div>
   );

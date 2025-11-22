@@ -155,36 +155,33 @@ export const TimelineTab: React.FC<TimelineTabProps> = ({ partner }) => {
       resetForm();
 
       // Award XP for adding timeline event
-      if (user?.id && partner.group_id) {
+      if (authUser?.id && partner.group_id) {
         const { XPService } = await import("@/services/xpService");
         const { AchievementService } = await import("@/services/achievementService");
 
         await XPService.handleTimelineEvent(
-          user.id,
+          authUser.id,
           partner.group_id,
           partner.id,
           selectedEventType
         );
 
         // Award XP for red flag if applicable
-        if (selectedEventType === "red_flag" && formData.severity) {
+        if (selectedEventType === "red_flag" && newEvent.severity) {
           await XPService.awardRedFlagXP(
-            user.id,
+            authUser.id,
             partner.group_id,
             partner.id,
-            formData.severity
+            newEvent.severity
           );
         }
 
         // Check achievements
-        await AchievementService.checkAchievements(user.id, partner.group_id);
+        await AchievementService.checkAchievements(authUser.id, partner.group_id);
 
         // Update streak
-        await XPService.updateStreak(user.id);
+        await XPService.updateStreak(authUser.id);
       }
-
-      // Reload to update financial_total
-      window.location.reload();
     } catch (error) {
       console.error("Error adding event:", error);
       alert(`Failed to add event: ${error instanceof Error ? error.message : String(error)}`);
@@ -201,7 +198,6 @@ export const TimelineTab: React.FC<TimelineTabProps> = ({ partner }) => {
       if (error) throw error;
 
       setEvents(events.filter((e) => e.id !== id));
-      window.location.reload();
     } catch (error) {
       console.error("Error deleting event:", error);
     }
@@ -352,20 +348,20 @@ export const TimelineTab: React.FC<TimelineTabProps> = ({ partner }) => {
       ) : (
         <TimelineContainer>
           {filteredEvents.map((event, index) => (
-            <div key={event.id} className="relative group">
-              <TimelineItem
-                icon={renderEventIcon(event)}
-                title={event.title}
-                description={event.description || ""}
-                timestamp={new Date(event.event_date).toLocaleDateString()}
-                variant={event.event_type === "red_flag" ? "danger" : event.event_type === "intimacy" ? "success" : "default"}
-                isLast={index === filteredEvents.length - 1}
-                metadata={renderEventMetadata(event)}
-              />
+            <TimelineItem
+              key={event.id}
+              icon={renderEventIcon(event)}
+              title={event.title}
+              description={event.description || ""}
+              timestamp={new Date(event.event_date).toLocaleDateString()}
+              variant={event.event_type === "red_flag" ? "danger" : event.event_type === "intimacy" ? "success" : "default"}
+              isLast={index === filteredEvents.length - 1}
+              metadata={renderEventMetadata(event)}
+            >
               {isOwner && (
                 <motion.button
                   onClick={() => handleDeleteEvent(event.id)}
-                  className="absolute top-4 right-4 w-8 h-8 rounded-full bg-simp-red/20 text-simp-red opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center hover:bg-simp-red/30"
+                  className="absolute top-0 right-0 w-8 h-8 rounded-full bg-simp-red/20 text-simp-red opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center hover:bg-simp-red/30"
                   whileHover={{ scale: 1.1 }}
                   whileTap={{ scale: 0.9 }}
                   transition={{ type: "tween", duration: 0.2 }}
@@ -373,7 +369,7 @@ export const TimelineTab: React.FC<TimelineTabProps> = ({ partner }) => {
                   <Trash2 className="w-4 h-4" />
                 </motion.button>
               )}
-            </div>
+            </TimelineItem>
           ))}
         </TimelineContainer>
       )}

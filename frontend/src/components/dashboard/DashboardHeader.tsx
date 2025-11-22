@@ -2,7 +2,7 @@
 
 import { useAuth } from '@/contexts/AuthContext'
 import { useRouter } from 'next/navigation'
-import { LogOut, LayoutGrid, Trophy } from 'lucide-react'
+import { LogOut, LayoutGrid, Trophy, PlusCircle } from 'lucide-react'
 import { motion } from 'framer-motion'
 import { useStore } from '@/store/useStore'
 
@@ -32,6 +32,21 @@ export function DashboardHeader() {
       </div>
 
       <div className="flex items-center gap-3">
+        {/* Add Planet Button */}
+        <motion.button
+          onClick={() => {
+            // Trigger add planet modal
+            const event = new CustomEvent('open-add-planet-modal')
+            window.dispatchEvent(event)
+          }}
+          whileHover={{ scale: 1.05 }}
+          whileTap={{ scale: 0.95 }}
+          className="flex items-center gap-2 px-4 py-2 bg-holo-cyan/20 hover:bg-holo-cyan/30 border border-holo-cyan/50 rounded text-holo-cyan font-mono text-sm transition-colors"
+        >
+          <PlusCircle className="w-4 h-4" />
+          ADD PLANET
+        </motion.button>
+
         {/* Betting Studio Button */}
         <div className="relative">
           {/* Golden glow around the button */}

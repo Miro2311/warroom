@@ -24,6 +24,7 @@ import { UserStatsModal } from "../dashboard/UserStatsModal";
 import { DashboardHeader } from "../dashboard/DashboardHeader";
 import { GalaxyBackground } from "./GalaxyBackground";
 import { BettingStudioPanel } from "../ui/BettingStudioPanel";
+import { AddPlanetModal } from "../dashboard/AddPlanetModal";
 import {
   GraveyardZone,
   TombstoneNode,
@@ -125,9 +126,16 @@ function WarRoomFlow() {
   const [showBettingStudioPanel, setShowBettingStudioPanel] = useState(false);
   const [groupMembers, setGroupMembers] = useState<any[]>([]);
 
+  // Add Planet Modal state
+  const [showAddPlanetModal, setShowAddPlanetModal] = useState(false);
+
   // Get graveyard count
   const graveyardCount = useGraveyardCount(partners);
   const graveyardPartners = partners.filter((p) => p.status === "Graveyard");
+
+  // Track all group members with their partners for multi-sun galaxy view
+  const [allGroupUsers, setAllGroupUsers] = useState<any[]>([]);
+  const [allGroupPartnersMap, setAllGroupPartnersMap] = useState<Map<string, any[]>>(new Map());
 
   // Orbital states for animation - use ref to avoid re-renders
   const orbitalStatesRef = useRef<OrbitalState[]>([]);
@@ -135,23 +143,33 @@ function WarRoomFlow() {
   const lastTimeRef = useRef<number>(Date.now());
   const [, forceUpdate] = useState({});
 
+  // Track if initial zoom has been done
+  const hasInitialZoomedRef = useRef(false);
+
   // Load data from Supabase
   useLoadData();
 
-  // Center on sun node when component mounts
+  // Center on current user's sun when component first loads (only once)
   useEffect(() => {
-    if (user && !loading) {
+    if (user && !loading && allGroupUsers.length > 0 && nodes.length > 0 && !hasInitialZoomedRef.current) {
       const timer = setTimeout(() => {
-        fitView({
-          nodes: nodes.filter(n => n.id === 'sun'),
-          duration: 800,
-          padding: 0.3,
-          maxZoom: 0.8,
-        });
-      }, 100);
+        // Find current user's sun
+        const currentUserSun = nodes.find(n => n.id === `sun-${user.id}`);
+        if (currentUserSun) {
+          console.log('Initial zoom to user sun:', currentUserSun.position);
+          fitView({
+            nodes: [currentUserSun],
+            duration: 800,
+            padding: 0.4,
+            minZoom: 0.3,
+            maxZoom: 0.8,
+          });
+          hasInitialZoomedRef.current = true; // Mark as done
+        }
+      }, 500); // Longer delay to ensure nodes are rendered
       return () => clearTimeout(timer);
     }
-  }, [user, loading, fitView]);
+  }, [user, loading, allGroupUsers, nodes, fitView]);
 
   // Listen for graveyard panel open event from header
   useEffect(() => {
@@ -173,20 +191,48 @@ function WarRoomFlow() {
     return () => window.removeEventListener('open-betting-studio', handleOpenBettingStudio);
   }, []);
 
-  // Load group members for betting studio
+  // Listen for add planet modal open event from header
+  useEffect(() => {
+    const handleOpenAddPlanet = () => {
+      setShowAddPlanetModal(true);
+    };
+
+    window.addEventListener('open-add-planet-modal', handleOpenAddPlanet);
+    return () => window.removeEventListener('open-add-planet-modal', handleOpenAddPlanet);
+  }, []);
+
+  // Load group members for betting studio AND multi-sun galaxy view
   useEffect(() => {
     const loadGroupMembers = async () => {
       if (!currentGroupId) return;
 
       const { supabase } = await import('@/lib/supabase');
-      const { data } = await supabase
+
+      // Get all group members with full user data
+      const { data: membersData } = await supabase
         .from('group_members')
         .select('user_id, users(id, username, level, current_xp, avatar_url)')
         .eq('group_id', currentGroupId);
 
-      if (data) {
-        const members = data.map((m: any) => m.users).filter(Boolean);
+      if (membersData) {
+        const members = membersData.map((m: any) => m.users).filter(Boolean);
         setGroupMembers(members);
+        setAllGroupUsers(members);
+
+        // Load partners for each user in the group
+        const partnersMap = new Map<string, any[]>();
+
+        for (const member of members) {
+          const { data: userPartners } = await supabase
+            .from('partners')
+            .select('*')
+            .eq('user_id', member.id)
+            .eq('group_id', currentGroupId);
+
+          partnersMap.set(member.id, userPartners || []);
+        }
+
+        setAllGroupPartnersMap(partnersMap);
       }
     };
 
@@ -208,11 +254,31 @@ function WarRoomFlow() {
         setTimeout(() => {
           setSelectedPartnerId(node.id);
         }, 1100); // Wait for zoom to finish
+      } else if (node.type === "sun") {
+        // Zoom into this user's solar system (sun + its planets)
+        const userId = node.id.replace('sun-', '');
+        const userPartners = allGroupPartnersMap.get(userId) || [];
+        const activePlanetIds = userPartners
+          .filter((p: any) => p.status !== "Graveyard")
+          .map((p: any) => p.id);
+
+        const relevantNodes = nodes.filter(
+          n => n.id === node.id || activePlanetIds.includes(n.id)
+        );
+
+        if (relevantNodes.length > 0) {
+          fitView({
+            nodes: relevantNodes,
+            duration: 1000,
+            padding: 0.3,
+            maxZoom: 1.2,
+          });
+        }
       } else {
         setSelectedPartnerId(null);
       }
     },
-    [setSelectedPartnerId, fitView]
+    [setSelectedPartnerId, fitView, allGroupPartnersMap, nodes]
   );
 
   const onPaneClick = useCallback(() => {
@@ -268,48 +334,155 @@ function WarRoomFlow() {
     forceUpdate({}); // Trigger initial render
   }, [user, partners, loading]);
 
-  // Initialize ALL nodes (Sun, Planets, Graveyard Zone, Tombstones)
-  useEffect(() => {
-    if (!user || loading) return;
+  // Helper function: Seeded random number generator (consistent positions per user)
+  const seededRandom = (seed: string) => {
+    let hash = 0;
+    for (let i = 0; i < seed.length; i++) {
+      hash = ((hash << 5) - hash) + seed.charCodeAt(i);
+      hash = hash & hash;
+    }
+    const x = Math.sin(hash) * 10000;
+    return x - Math.floor(x);
+  };
 
-    const activePartners = partners.filter((p) => p.status !== "Graveyard");
+  // Helper function: Generate random position with minimum distance check
+  const generateRandomPosition = (
+    userId: string,
+    existingPositions: { x: number; y: number }[],
+    minDistance: number,
+    maxAttempts: number = 50
+  ): { x: number; y: number } => {
+    const minRadius = 600;  // Minimum distance from center
+    const maxRadius = 1400; // Maximum distance from center
 
-    // Create planet nodes with initial positions
-    const planetNodes: Node[] = activePartners.map((partner) => {
-      const orbitalState = orbitalStatesRef.current.find(
-        (s) => s.partnerId === partner.id
-      );
+    for (let attempt = 0; attempt < maxAttempts; attempt++) {
+      // Use seeded random for consistency
+      const seed1 = seededRandom(`${userId}-${attempt}-x`);
+      const seed2 = seededRandom(`${userId}-${attempt}-y`);
 
-      let position = { x: 0, y: 0 };
-      if (orbitalState) {
-        position = polarToCartesian(orbitalState.angle, orbitalState.radius);
+      // Random angle and radius
+      const angle = seed1 * 2 * Math.PI;
+      const radius = minRadius + seed2 * (maxRadius - minRadius);
+
+      const x = Math.cos(angle) * radius;
+      const y = Math.sin(angle) * radius;
+
+      // Check minimum distance from all existing positions
+      const tooClose = existingPositions.some(pos => {
+        const dist = Math.sqrt((x - pos.x) ** 2 + (y - pos.y) ** 2);
+        return dist < minDistance;
+      });
+
+      if (!tooClose) {
+        return { x, y };
       }
+    }
+
+    // Fallback: return a position even if it's close (shouldn't happen often)
+    const fallbackAngle = seededRandom(userId) * 2 * Math.PI;
+    const fallbackRadius = minRadius + seededRandom(`${userId}-fallback`) * (maxRadius - minRadius);
+    return {
+      x: Math.cos(fallbackAngle) * fallbackRadius,
+      y: Math.sin(fallbackAngle) * fallbackRadius,
+    };
+  };
+
+  // Initialize ALL nodes (Multiple Suns for each group member + their Planets)
+  useEffect(() => {
+    if (!user || loading || allGroupUsers.length === 0) return;
+
+    // STEP 1: Calculate ABSOLUTE positions for all suns (independent of viewer)
+    // Sort users by ID to ensure consistent order for everyone
+    const sortedUsers = [...allGroupUsers].sort((a, b) => a.id.localeCompare(b.id));
+
+    const minSunDistance = 700; // Minimum distance between suns
+    const absolutePositions = new Map<string, { x: number; y: number }>();
+    const existingPositions: { x: number; y: number }[] = [];
+
+    // First user gets center position in ABSOLUTE space
+    const firstUser = sortedUsers[0];
+    absolutePositions.set(firstUser.id, { x: 0, y: 0 });
+    existingPositions.push({ x: 0, y: 0 });
+
+    // Generate absolute positions for all other users
+    for (let i = 1; i < sortedUsers.length; i++) {
+      const groupUser = sortedUsers[i];
+      const position = generateRandomPosition(groupUser.id, existingPositions, minSunDistance);
+      absolutePositions.set(groupUser.id, position);
+      existingPositions.push(position);
+    }
+
+    // STEP 2: Calculate offset to center current user's sun at (0, 0) on screen
+    const currentUserAbsolutePos = absolutePositions.get(user.id) || { x: 0, y: 0 };
+    const offsetX = -currentUserAbsolutePos.x;
+    const offsetY = -currentUserAbsolutePos.y;
+
+    // STEP 3: Create sun nodes with offset applied (so current user appears at center)
+    const sunNodes: Node[] = allGroupUsers.map((groupUser) => {
+      const absolutePos = absolutePositions.get(groupUser.id) || { x: 0, y: 0 };
+
+      // Apply offset so current user's sun is at (0, 0)
+      const x = absolutePos.x + offsetX;
+      const y = absolutePos.y + offsetY;
+
+      // Get this user's partners
+      const userPartners = allGroupPartnersMap.get(groupUser.id) || [];
+      const activePartners = userPartners.filter((p: any) => p.status !== "Graveyard");
 
       return {
-        id: partner.id,
-        type: "planet",
-        position,
-        data: { partner },
-        draggable: true,
+        id: `sun-${groupUser.id}`,
+        type: "sun",
+        position: { x, y },
+        data: { user: groupUser, partners: activePartners },
+        draggable: false,
       };
     });
 
-    // Sun node - Pass all partners (including non-graveyard) to detect cheater status
-    const sunNode: Node = {
-      id: "sun",
-      type: "sun",
-      position: { x: 0, y: 0 },
-      data: { user, partners: activePartners },
-      draggable: false,
-    };
+    // Create planet nodes for ALL users
+    const allPlanetNodes: Node[] = [];
 
-    // Set all nodes (sun + planets only, graveyard zone removed - now in header)
-    setNodes([sunNode, ...planetNodes]);
-  }, [user, partners, loading, graveyardCount, setShowGraveyardPanel, setNodes]);
+    allGroupUsers.forEach((groupUser) => {
+      const userPartners = allGroupPartnersMap.get(groupUser.id) || [];
+      const activePartners = userPartners.filter((p: any) => p.status !== "Graveyard");
+
+      // Find this user's sun position
+      const sunNode = sunNodes.find(s => s.id === `sun-${groupUser.id}`);
+      if (!sunNode) return;
+
+      // Create planets orbiting this user's sun
+      activePartners.forEach((partner: any) => {
+        const orbitalState = orbitalStatesRef.current.find(
+          (s) => s.partnerId === partner.id
+        );
+
+        // Calculate position relative to this user's sun
+        let relativePosition = { x: 0, y: 0 };
+        if (orbitalState) {
+          relativePosition = polarToCartesian(orbitalState.angle, orbitalState.radius);
+        }
+
+        const absolutePosition = {
+          x: sunNode.position.x + relativePosition.x,
+          y: sunNode.position.y + relativePosition.y,
+        };
+
+        allPlanetNodes.push({
+          id: partner.id,
+          type: "planet",
+          position: absolutePosition,
+          data: { partner },
+          draggable: true,
+        });
+      });
+    });
+
+    // Set all nodes (multiple suns + all planets)
+    setNodes([...sunNodes, ...allPlanetNodes]);
+  }, [user, loading, allGroupUsers, allGroupPartnersMap, graveyardCount, setNodes]);
 
   // Orbital Animation Loop with optimized updates - ONLY updates positions, not entire nodes
   useEffect(() => {
-    if (orbitalStatesRef.current.length === 0 || !user) return;
+    if (orbitalStatesRef.current.length === 0 || !user || allGroupUsers.length === 0) return;
 
     let frameCount = 0;
     const updateInterval = 3; // Update every 3 frames for 20fps (smoother performance)
@@ -352,13 +525,24 @@ function WarRoomFlow() {
 
             if (!orbitalState) return node;
 
-            // Calculate new position
-            const newPosition = polarToCartesian(orbitalState.angle, orbitalState.radius);
+            // Find the sun node that this planet belongs to
+            const partner = node.data?.partner as any;
+            if (!partner || !partner.user_id) return node;
+            const sunNode = currentNodes.find(n => n.id === `sun-${partner.user_id}`);
+
+            if (!sunNode) return node;
+
+            // Calculate new position relative to the sun
+            const relativePosition = polarToCartesian(orbitalState.angle, orbitalState.radius);
+            const absolutePosition = {
+              x: sunNode.position.x + relativePosition.x,
+              y: sunNode.position.y + relativePosition.y,
+            };
 
             // Return node with updated position
             return {
               ...node,
-              position: newPosition,
+              position: absolutePosition,
             };
           })
         );
@@ -374,29 +558,37 @@ function WarRoomFlow() {
         cancelAnimationFrame(animationFrameRef.current);
       }
     };
-  }, [user, selectedPartnerId, draggedNodeId, setNodes]);
+  }, [user, selectedPartnerId, draggedNodeId, allGroupUsers, setNodes]);
 
-  // Initialize edges once (only for active partners)
+  // Initialize edges for all planets to their respective suns
   useEffect(() => {
-    if (!user || loading || partners.length === 0) return;
+    if (!user || loading || allGroupUsers.length === 0) return;
 
-    const activePartners = partners.filter((p) => p.status !== "Graveyard");
-    const newEdges: Edge[] = activePartners.map((p) => ({
-      id: `e-sun-${p.id}`,
-      source: "sun",
-      target: p.id,
-      animated: false,
-      type: 'straight', // Straight lines from center
-      style: {
-        stroke: "#00F0FF",
-        strokeWidth: 1,
-        strokeDasharray: "5, 5",
-        opacity: 0.15,
-      },
-    }));
+    const newEdges: Edge[] = [];
+
+    allGroupUsers.forEach((groupUser) => {
+      const userPartners = allGroupPartnersMap.get(groupUser.id) || [];
+      const activePartners = userPartners.filter((p: any) => p.status !== "Graveyard");
+
+      activePartners.forEach((partner: any) => {
+        newEdges.push({
+          id: `e-sun-${groupUser.id}-${partner.id}`,
+          source: `sun-${groupUser.id}`,
+          target: partner.id,
+          animated: false,
+          type: 'straight',
+          style: {
+            stroke: "#00F0FF",
+            strokeWidth: 1,
+            strokeDasharray: "5, 5",
+            opacity: 0.15,
+          },
+        });
+      });
+    });
 
     setEdges(newEdges);
-  }, [user, partners, loading, setEdges]);
+  }, [user, loading, allGroupUsers, allGroupPartnersMap, setEdges]);
 
   // Show loading state
   if (loading || !user) {
@@ -590,15 +782,15 @@ function WarRoomFlow() {
     // First: Close modal
     setSelectedPartnerId(null);
 
-    // Second: Zoom back to the sun (center of solar system) after modal starts closing
+    // Second: Zoom back to current user's sun after modal starts closing
     setTimeout(() => {
-      const sunNode = nodes.find((n) => n.id === "sun");
-      if (sunNode) {
+      const currentUserSun = nodes.find((n) => n.id === `sun-${user?.id}`);
+      if (currentUserSun) {
         fitView({
-          nodes: [sunNode],
+          nodes: [currentUserSun],
           duration: 1000,
-          padding: 0.8, // Show full solar system around sun
-          maxZoom: 1,
+          padding: 0.5,
+          maxZoom: 0.8,
         });
       } else {
         // Fallback if sun not found
@@ -620,8 +812,7 @@ function WarRoomFlow() {
         onNodeClick={onNodeClick}
         onPaneClick={onPaneClick}
         nodeTypes={nodeTypes}
-        fitView
-        fitViewOptions={{ padding: 0.2 }}
+        defaultViewport={{ x: 0, y: 0, zoom: 0.6 }}
         minZoom={0.1}
         maxZoom={4}
         proOptions={{ hideAttribution: true }}
@@ -697,6 +888,12 @@ function WarRoomFlow() {
         onClose={() => setShowBettingStudioPanel(false)}
         groupId={currentGroupId || ""}
         groupMembers={groupMembers}
+      />
+
+      {/* Add Planet Modal */}
+      <AddPlanetModal
+        isOpen={showAddPlanetModal}
+        onClose={() => setShowAddPlanetModal(false)}
       />
     </>
   );

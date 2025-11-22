@@ -44,7 +44,11 @@
       "Bash(del frontendnul)",
       "Bash(cmd.exe /c \"del /F frontend\\nul\")",
       "Bash(git clean:*)",
-      "Bash(.gitignore)"
+      "Bash(.gitignore)",
+      "Bash(git push:*)",
+      "Bash(node apply-vote-fix.mjs:*)",
+      "Bash(curl:*)",
+      "Bash(rm:*)"
     ],
     "deny": [],
     "ask": []
