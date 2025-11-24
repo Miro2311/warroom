@@ -20,7 +20,6 @@ import {
   Award,
   TrendingDown,
 } from "lucide-react";
-import { useXP } from "@/hooks/useXP";
 import { XPTransaction, Achievement } from "@/types/xp";
 
 interface UserStatsModalProps {
@@ -454,14 +453,44 @@ export const UserStatsModal: React.FC<UserStatsModalProps> = ({
   onClose,
 }) => {
   const [activeTab, setActiveTab] = useState("overview");
-  const { xpHistory, achievements, loadXPHistory, loadAchievements } = useXP();
+  const [xpHistory, setXpHistory] = useState<XPTransaction[]>([]);
+  const [achievements, setAchievements] = useState<Achievement[]>([]);
+  const [loading, setLoading] = useState(false);
 
   useEffect(() => {
     if (isOpen && user) {
-      loadXPHistory();
-      loadAchievements();
+      loadUserXPHistory();
+      loadUserAchievements();
     }
   }, [isOpen, user]);
+
+  const loadUserXPHistory = async () => {
+    if (!user) return;
+    setLoading(true);
+    try {
+      const { XPService } = await import("@/services/xpService");
+      const history = await XPService.getXPHistory(user.id);
+      setXpHistory(history);
+    } catch (error) {
+      console.error("Error loading XP history:", error);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const loadUserAchievements = async () => {
+    if (!user) return;
+    setLoading(true);
+    try {
+      const { AchievementService } = await import("@/services/achievementService");
+      const userAchievements = await AchievementService.getUserAchievements(user.id);
+      setAchievements(userAchievements);
+    } catch (error) {
+      console.error("Error loading achievements:", error);
+    } finally {
+      setLoading(false);
+    }
+  };
 
   if (!user) return null;
 
