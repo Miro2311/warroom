@@ -184,6 +184,9 @@ export const TimelineTab: React.FC<TimelineTabProps> = ({ partner }) => {
         // Update streak
         await XPService.updateStreak(authUser.id);
       }
+
+      // Reload to update financial_total from DB trigger
+      window.location.reload();
     } catch (error) {
       console.error("Error adding event:", error);
       alert(`Failed to add event: ${error instanceof Error ? error.message : String(error)}`);
@@ -212,6 +215,9 @@ export const TimelineTab: React.FC<TimelineTabProps> = ({ partner }) => {
       }
 
       setEvents(events.filter((e) => e.id !== id));
+
+      // Reload to update financial_total from DB trigger
+      window.location.reload();
     } catch (error) {
       console.error("Error deleting event:", error);
     }
