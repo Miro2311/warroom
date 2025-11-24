@@ -419,12 +419,12 @@ WITH CHECK (
 CREATE POLICY "Users can update own partner red flags"
 ON public.partner_red_flags
 FOR UPDATE
-USING (reporter_id = (SELECT auth.uid()));
+USING (reported_by_id = (SELECT auth.uid()));
 
 CREATE POLICY "Users can delete own partner red flags"
 ON public.partner_red_flags
 FOR DELETE
-USING (reporter_id = (SELECT auth.uid()));
+USING (reported_by_id = (SELECT auth.uid()));
 
 -- =======================
 -- STICKY NOTES TABLE POLICIES
