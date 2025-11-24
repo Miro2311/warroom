@@ -106,7 +106,7 @@ export const StatCard: React.FC<StatCardProps> = ({
 
       {/* Value */}
       <motion.div
-        className="text-4xl font-mono font-bold text-white mb-2"
+        className="text-2xl sm:text-3xl md:text-4xl font-mono font-bold text-white mb-2 break-all overflow-hidden"
         initial={animate ? { opacity: 0, y: 20 } : false}
         animate={animate ? { opacity: 1, y: 0 } : false}
         transition={{ delay: 0.1 }}

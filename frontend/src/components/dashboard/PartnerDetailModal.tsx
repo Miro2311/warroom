@@ -151,11 +151,11 @@ export const PartnerDetailModal: React.FC<PartnerDetailModalProps> = ({
                         </select>
                       )}
                     </div>
-                    <Dialog.Description className="text-sm text-white/50 font-mono mt-2">
-                      Partner ID: {partner.id.slice(0, 8)}... • Created{" "}
-                      {new Date(partner.created_at).toLocaleDateString()}
-                      {!isOwner && <span className="ml-2 text-yellow-400">(View Only)</span>}
-                    </Dialog.Description>
+                    <VisuallyHidden.Root>
+                      <Dialog.Description>
+                        Partner details for {partner.nickname}
+                      </Dialog.Description>
+                    </VisuallyHidden.Root>
                   </div>
 
                   <div className="flex items-center gap-2 md:gap-3">
