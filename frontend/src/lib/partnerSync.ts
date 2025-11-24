@@ -29,6 +29,8 @@ export async function syncNewPartner(
   }
 ): Promise<void> {
   try {
+    console.log(`syncNewPartner called for "${partnerData.nickname}" (user: ${userId}, group: ${originalGroupId})`);
+
     // Find all groups the user is a member of (except the original)
     const { data: memberships, error: memberError } = await supabase
       .from("group_members")
@@ -36,8 +38,13 @@ export async function syncNewPartner(
       .eq("user_id", userId)
       .neq("group_id", originalGroupId);
 
-    if (memberError || !memberships || memberships.length === 0) {
-      console.log("No other groups to sync partner to");
+    if (memberError) {
+      console.error("Error fetching group memberships:", memberError);
+      return;
+    }
+
+    if (!memberships || memberships.length === 0) {
+      console.log("No other groups to sync partner to (user is only in one group)");
       return;
     }
 
