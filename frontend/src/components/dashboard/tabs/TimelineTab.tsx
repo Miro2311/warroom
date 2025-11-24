@@ -23,6 +23,7 @@ import {
 } from "lucide-react";
 import { supabase } from "@/lib/supabase";
 import { useAuth } from "@/contexts/AuthContext";
+import { syncTimelineEvent, syncDeleteTimelineEvent } from "@/lib/partnerSync";
 
 interface TimelineTabProps {
   partner: PartnerNode;
@@ -146,6 +147,10 @@ export const TimelineTab: React.FC<TimelineTabProps> = ({ partner }) => {
 
       console.log("Event created successfully:", data);
 
+      // Sync to all matching partners in other groups
+      const { partner_id, id, created_at, ...syncData } = eventData;
+      await syncTimelineEvent(partner.id, syncData);
+
       setEvents([data, ...events]);
       setShowAddModal(false);
       setSelectedEventType(null);
@@ -187,12 +192,24 @@ export const TimelineTab: React.FC<TimelineTabProps> = ({ partner }) => {
 
   const handleDeleteEvent = async (id: string) => {
     try {
+      // Get the event data before deleting (for sync)
+      const eventToDelete = events.find(e => e.id === id);
+
       const { error } = await supabase
         .from("timeline_events")
         .delete()
         .eq("id", id);
 
       if (error) throw error;
+
+      // Sync delete to all matching partners
+      if (eventToDelete) {
+        await syncDeleteTimelineEvent(partner.id, {
+          title: eventToDelete.title,
+          event_date: eventToDelete.event_date,
+          event_type: eventToDelete.event_type,
+        });
+      }
 
       setEvents(events.filter((e) => e.id !== id));
     } catch (error) {

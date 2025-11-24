@@ -19,6 +19,7 @@ import {
   X,
 } from "lucide-react";
 import { supabase } from "@/lib/supabase";
+import { syncTimelineEvent, syncDeleteTimelineEvent } from "@/lib/partnerSync";
 
 interface FinancialTabProps {
   partner: PartnerNode;
@@ -102,6 +103,16 @@ export const FinancialTab: React.FC<FinancialTabProps> = ({ partner }) => {
 
       if (error) throw error;
 
+      // Sync to all matching partners in other groups
+      await syncTimelineEvent(partner.id, {
+        event_type: "expense",
+        title: newEvent.title,
+        description: newEvent.description || null,
+        event_date: newEvent.date,
+        amount: parseFloat(newEvent.amount),
+        category: newEvent.category,
+      });
+
       setEvents([data, ...events]);
       setShowAddForm(false);
       setNewEvent({
@@ -121,12 +132,24 @@ export const FinancialTab: React.FC<FinancialTabProps> = ({ partner }) => {
 
   const handleDeleteEvent = async (id: string) => {
     try {
+      // Get the event data before deleting (for sync)
+      const eventToDelete = events.find(e => e.id === id);
+
       const { error } = await supabase
         .from("timeline_events")
         .delete()
         .eq("id", id);
 
       if (error) throw error;
+
+      // Sync delete to all matching partners
+      if (eventToDelete) {
+        await syncDeleteTimelineEvent(partner.id, {
+          title: eventToDelete.title,
+          event_date: eventToDelete.event_date,
+          event_type: eventToDelete.event_type,
+        });
+      }
 
       setEvents(events.filter((e) => e.id !== id));
 

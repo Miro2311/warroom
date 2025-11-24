@@ -42,6 +42,7 @@ import {
   getRandomStartAngle,
   calculateTimeOffset,
 } from "@/lib/orbitCalculator";
+import { syncPartnerData } from "@/lib/partnerSync";
 import { Variants } from "framer-motion";
 
 const warpAnimation: Variants = {
@@ -674,6 +675,9 @@ function WarRoomFlow() {
       }
 
       console.log('Partner updated successfully in database:', data);
+
+      // Sync to all matching partners in other groups
+      await syncPartnerData(updatedPartner.id, updateData);
 
       // Update local state through the store
       useStore.getState().updatePartner(updatedPartner.id, {
