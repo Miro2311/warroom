@@ -238,3 +238,127 @@ export async function syncDeleteTimelineEvent(
     console.error("Error in syncDeleteTimelineEvent:", error);
   }
 }
+
+/**
+ * Copy all user's partners to a new group when they join it
+ * Call this after a user joins a new group
+ */
+export async function copyPartnersToNewGroup(
+  userId: string,
+  newGroupId: string
+): Promise<void> {
+  console.log("=== copyPartnersToNewGroup START ===");
+  console.log(`Copying partners for user ${userId} to new group ${newGroupId}`);
+
+  try {
+    // Get all partners from user's other groups
+    const { data: existingPartners, error: fetchError } = await supabase
+      .from("partners")
+      .select("*")
+      .eq("user_id", userId)
+      .neq("group_id", newGroupId);
+
+    if (fetchError) {
+      console.error("Error fetching existing partners:", fetchError);
+      return;
+    }
+
+    if (!existingPartners || existingPartners.length === 0) {
+      console.log("No existing partners to copy");
+      return;
+    }
+
+    // Get unique partners by nickname (in case same partner exists in multiple groups)
+    const uniquePartners = new Map();
+    for (const partner of existingPartners) {
+      const key = partner.nickname.toLowerCase();
+      if (!uniquePartners.has(key)) {
+        uniquePartners.set(key, partner);
+      }
+    }
+
+    console.log(`Found ${uniquePartners.size} unique partners to copy`);
+
+    // Copy each unique partner to the new group
+    for (const [, partner] of uniquePartners) {
+      const newPartner = {
+        nickname: partner.nickname,
+        user_id: userId,
+        group_id: newGroupId,
+        status: partner.status,
+        financial_total: partner.financial_total,
+        time_total: partner.time_total,
+        intimacy_score: partner.intimacy_score,
+        cause_of_death: partner.cause_of_death,
+        cause_of_death_custom: partner.cause_of_death_custom,
+        graveyard_date: partner.graveyard_date,
+      };
+
+      const { data: createdPartner, error: insertError } = await supabase
+        .from("partners")
+        .insert(newPartner)
+        .select()
+        .single();
+
+      if (insertError) {
+        console.error(`Error copying partner "${partner.nickname}":`, insertError);
+      } else {
+        console.log(`Copied partner "${partner.nickname}" to new group`);
+
+        // Also copy timeline events for this partner
+        if (createdPartner) {
+          await copyTimelineEventsToPartner(partner.id, createdPartner.id);
+        }
+      }
+    }
+
+    console.log("=== copyPartnersToNewGroup END ===");
+  } catch (error) {
+    console.error("Error in copyPartnersToNewGroup:", error);
+  }
+}
+
+/**
+ * Copy all timeline events from one partner to another
+ */
+async function copyTimelineEventsToPartner(
+  sourcePartnerId: string,
+  targetPartnerId: string
+): Promise<void> {
+  try {
+    const { data: events, error: fetchError } = await supabase
+      .from("timeline_events")
+      .select("*")
+      .eq("partner_id", sourcePartnerId);
+
+    if (fetchError || !events || events.length === 0) {
+      return;
+    }
+
+    for (const event of events) {
+      const { error: insertError } = await supabase
+        .from("timeline_events")
+        .insert({
+          partner_id: targetPartnerId,
+          event_type: event.event_type,
+          title: event.title,
+          description: event.description,
+          event_date: event.event_date,
+          amount: event.amount,
+          partner_amount: event.partner_amount,
+          category: event.category,
+          severity: event.severity,
+          intimacy_change: event.intimacy_change,
+          metadata: event.metadata,
+        });
+
+      if (insertError) {
+        console.error(`Error copying timeline event:`, insertError);
+      }
+    }
+
+    console.log(`Copied ${events.length} timeline events to new partner`);
+  } catch (error) {
+    console.error("Error copying timeline events:", error);
+  }
+}

@@ -7,6 +7,7 @@ import { motion } from 'framer-motion'
 import { Plus, Users, LogOut, Loader2 } from 'lucide-react'
 import { useRouter } from 'next/navigation'
 import { StarsBackground } from '@/components/ui/stars-background'
+import { copyPartnersToNewGroup } from '@/lib/partnerSync'
 
 interface Group {
   id: string
@@ -226,6 +227,9 @@ export default function DashboardPage() {
       }
 
       console.log('Successfully joined group:', groupData.name)
+
+      // Copy all user's existing partners to the new group
+      await copyPartnersToNewGroup(user.id, groupData.id)
 
       // Success - reset form and reload groups
       setInviteCode('')
