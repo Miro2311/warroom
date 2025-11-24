@@ -211,8 +211,20 @@ export const SunNode = ({ data }: SunNodeProps) => {
         )}
       </AnimatePresence>
 
-      <div className="z-10 text-center pointer-events-none">
-        <div className="font-display text-white font-bold tracking-wider text-sm uppercase drop-shadow-md">
+      <div className="z-10 text-center pointer-events-none px-2">
+        <div
+          className={`font-display text-white font-bold tracking-wider uppercase drop-shadow-md ${
+            user.username.length <= 8
+              ? 'text-sm'
+              : user.username.length <= 12
+              ? 'text-xs'
+              : 'text-[10px]'
+          }`}
+          style={{
+            wordBreak: 'break-word',
+            lineHeight: '1.2',
+          }}
+        >
           {user.username}
         </div>
         <div className="font-mono text-[10px] text-yellow-200 font-bold">
