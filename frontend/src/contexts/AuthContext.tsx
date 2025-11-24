@@ -49,6 +49,17 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     })
 
     if (error) {
+      // Handle specific error cases
+      if (error.message.includes('Email not confirmed')) {
+        return {
+          error: new Error('Please confirm your email address before logging in. Check your inbox for the confirmation link.')
+        }
+      }
+      if (error.message.includes('Invalid login credentials')) {
+        return {
+          error: new Error('Invalid email or password. If you just signed up, please check your email for a confirmation link.')
+        }
+      }
       return { error }
     }
 
@@ -126,7 +137,36 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       return { error: new Error('Sign up succeeded but no user data returned') }
     }
 
-    // CRITICAL: Create user profile BEFORE routing to dashboard
+    // Check if email confirmation is required (no session means confirmation needed)
+    const emailConfirmationRequired = data.session === null
+
+    if (emailConfirmationRequired) {
+      // Email confirmation is required - user will need to click the link in their email
+      console.log('Email confirmation required for user:', data.user.id)
+
+      // Still create the profile so it exists when they confirm
+      const { error: profileError } = await supabase
+        .from('users')
+        .insert({
+          id: data.user.id,
+          username,
+          current_xp: 0,
+          level: 1,
+        })
+
+      if (profileError && profileError.code !== '23505') {
+        // Ignore duplicate key errors (profile already exists)
+        console.error('Error creating user profile:', profileError)
+      }
+
+      return {
+        error: new Error('Account created! Please check your email to confirm your account before logging in.')
+      }
+    }
+
+    // No email confirmation required - create profile and log in immediately
+    console.log('No email confirmation required, creating profile and logging in')
+
     const { error: profileError } = await supabase
       .from('users')
       .insert({

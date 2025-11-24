@@ -59,17 +59,8 @@ export const TimelineTab: React.FC<TimelineTabProps> = ({ partner }) => {
   const [showAddModal, setShowAddModal] = useState(false);
   const [selectedEventType, setSelectedEventType] = useState<EventType | null>(null);
 
-  // Check if current user is the owner
-  // TEMPORARILY DISABLED for testing - everyone can add events
-  const isOwner = true; // authUser?.id === partner.user_id;
-
-  console.log('Timeline Debug:', {
-    authUserId: authUser?.id,
-    partnerId: partner.id,
-    partnerUserId: partner.user_id,
-    isOwner,
-    note: 'isOwner temporarily set to true for testing'
-  });
+  // Check if current user is the owner - only owner can add timeline events
+  const isOwner = authUser?.id === partner.user_id;
 
   // Form state
   const [newEvent, setNewEvent] = useState({
@@ -77,6 +68,7 @@ export const TimelineTab: React.FC<TimelineTabProps> = ({ partner }) => {
     description: "",
     date: new Date().toISOString().split("T")[0],
     amount: "",
+    partner_amount: "", // Her spending
     category: "Dining" as EventCategory,
     severity: "Medium" as RedFlagSeverity,
     intimacy_change: 0,
@@ -124,8 +116,11 @@ export const TimelineTab: React.FC<TimelineTabProps> = ({ partner }) => {
       if (selectedEventType === "expense" || selectedEventType === "date") {
         if (newEvent.amount) {
           eventData.amount = parseFloat(newEvent.amount);
-          eventData.category = newEvent.category;
         }
+        if (newEvent.partner_amount) {
+          eventData.partner_amount = parseFloat(newEvent.partner_amount);
+        }
+        eventData.category = newEvent.category;
       }
 
       if (selectedEventType === "red_flag") {
@@ -211,6 +206,7 @@ export const TimelineTab: React.FC<TimelineTabProps> = ({ partner }) => {
       description: "",
       date: new Date().toISOString().split("T")[0],
       amount: "",
+      partner_amount: "",
       category: "Dining",
       severity: "Medium",
       intimacy_change: 0,
@@ -235,8 +231,14 @@ export const TimelineTab: React.FC<TimelineTabProps> = ({ partner }) => {
         </AnimatedBadge>
 
         {event.amount && (
-          <span className="text-sm font-mono text-yellow-400">
-            ${event.amount.toFixed(2)}
+          <span className="text-sm font-mono text-yellow-400" title="Your spending">
+            You: ${event.amount.toFixed(2)}
+          </span>
+        )}
+
+        {event.partner_amount && (
+          <span className="text-sm font-mono text-lust-pink" title="Her spending">
+            Her: ${event.partner_amount.toFixed(2)}
           </span>
         )}
 
@@ -503,19 +505,34 @@ export const TimelineTab: React.FC<TimelineTabProps> = ({ partner }) => {
 
                   {/* Type-specific fields */}
                   {(selectedEventType === "expense" || selectedEventType === "date") && (
-                    <div className="grid grid-cols-2 gap-4">
-                      <div>
-                        <label className="text-xs font-mono text-white/50 uppercase tracking-wider block mb-2">
-                          Amount ($)
-                        </label>
-                        <input
-                          type="number"
-                          step="0.01"
-                          value={newEvent.amount}
-                          onChange={(e) => setNewEvent({ ...newEvent, amount: e.target.value })}
-                          className="w-full bg-white/10 border border-white/20 px-4 py-3 rounded text-white font-mono focus:outline-none focus:border-holo-cyan transition-colors"
-                          placeholder="0.00"
-                        />
+                    <>
+                      <div className="grid grid-cols-2 gap-4">
+                        <div>
+                          <label className="text-xs font-mono text-yellow-400 uppercase tracking-wider block mb-2">
+                            Your Spending ($)
+                          </label>
+                          <input
+                            type="number"
+                            step="0.01"
+                            value={newEvent.amount}
+                            onChange={(e) => setNewEvent({ ...newEvent, amount: e.target.value })}
+                            className="w-full bg-white/10 border border-yellow-400/30 px-4 py-3 rounded text-white font-mono focus:outline-none focus:border-yellow-400 transition-colors"
+                            placeholder="0.00"
+                          />
+                        </div>
+                        <div>
+                          <label className="text-xs font-mono text-lust-pink uppercase tracking-wider block mb-2">
+                            Her Spending ($)
+                          </label>
+                          <input
+                            type="number"
+                            step="0.01"
+                            value={newEvent.partner_amount}
+                            onChange={(e) => setNewEvent({ ...newEvent, partner_amount: e.target.value })}
+                            className="w-full bg-white/10 border border-lust-pink/30 px-4 py-3 rounded text-white font-mono focus:outline-none focus:border-lust-pink transition-colors"
+                            placeholder="0.00"
+                          />
+                        </div>
                       </div>
                       <div>
                         <label className="text-xs font-mono text-white/50 uppercase tracking-wider block mb-2">
@@ -531,7 +548,7 @@ export const TimelineTab: React.FC<TimelineTabProps> = ({ partner }) => {
                           ))}
                         </select>
                       </div>
-                    </div>
+                    </>
                   )}
 
                   {selectedEventType === "red_flag" && (

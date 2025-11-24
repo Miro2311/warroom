@@ -103,7 +103,8 @@ export interface TimelineEvent {
   event_date: string; // ISO date string
   created_at: string;
   // Financial data (for expenses and dates)
-  amount?: number;
+  amount?: number; // Your spending
+  partner_amount?: number; // Her spending (gifts, paid for dates, etc.)
   category?: EventCategory;
   // Red flag data
   severity?: RedFlagSeverity;
