@@ -6,6 +6,7 @@ import { X, Rocket } from "lucide-react";
 import { useAuth } from "@/contexts/AuthContext";
 import { useStore } from "@/store/useStore";
 import { supabase } from "@/lib/supabase";
+import { syncNewPartner } from "@/lib/partnerSync";
 
 interface AddPlanetModalProps {
   isOpen: boolean;
@@ -54,6 +55,16 @@ export const AddPlanetModal: React.FC<AddPlanetModalProps> = ({ isOpen, onClose 
       }
 
       console.log("Partner created successfully:", data);
+
+      // Sync to all other groups the user is in
+      await syncNewPartner(user.id, currentGroupId, {
+        id: data.id,
+        nickname: data.nickname,
+        status: data.status,
+        financial_total: data.financial_total,
+        time_total: data.time_total,
+        intimacy_score: data.intimacy_score,
+      });
 
       // Add to store
       addPartner(data);

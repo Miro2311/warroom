@@ -13,6 +13,64 @@ interface PartnerIdentifier {
 }
 
 /**
+ * Create a new partner in ALL groups the user is a member of
+ * Call this after creating a new partner
+ */
+export async function syncNewPartner(
+  userId: string,
+  originalGroupId: string,
+  partnerData: {
+    id: string;
+    nickname: string;
+    status: string;
+    financial_total: number;
+    time_total: number;
+    intimacy_score: number;
+  }
+): Promise<void> {
+  try {
+    // Find all groups the user is a member of (except the original)
+    const { data: memberships, error: memberError } = await supabase
+      .from("group_members")
+      .select("group_id")
+      .eq("user_id", userId)
+      .neq("group_id", originalGroupId);
+
+    if (memberError || !memberships || memberships.length === 0) {
+      console.log("No other groups to sync partner to");
+      return;
+    }
+
+    console.log(`Syncing new partner to ${memberships.length} other groups`);
+
+    // Create the partner in each other group
+    for (const membership of memberships) {
+      const newPartner = {
+        nickname: partnerData.nickname,
+        user_id: userId,
+        group_id: membership.group_id,
+        status: partnerData.status,
+        financial_total: partnerData.financial_total,
+        time_total: partnerData.time_total,
+        intimacy_score: partnerData.intimacy_score,
+      };
+
+      const { error: insertError } = await supabase
+        .from("partners")
+        .insert(newPartner);
+
+      if (insertError) {
+        console.error(`Error creating partner in group ${membership.group_id}:`, insertError);
+      } else {
+        console.log(`Created partner in group ${membership.group_id}`);
+      }
+    }
+  } catch (error) {
+    console.error("Error in syncNewPartner:", error);
+  }
+}
+
+/**
  * Find all partner IDs that match the same person (same nickname + user_id)
  */
 export async function findMatchingPartnerIds(partnerId: string): Promise<string[]> {
