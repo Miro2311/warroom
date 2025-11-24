@@ -435,8 +435,9 @@ ON public.sticky_notes
 FOR SELECT
 USING (
   EXISTS (
-    SELECT 1 FROM public.group_members
-    WHERE group_members.group_id = sticky_notes.group_id
+    SELECT 1 FROM public.partners
+    JOIN public.group_members ON group_members.group_id = partners.group_id
+    WHERE partners.id = sticky_notes.partner_id
     AND group_members.user_id = (SELECT auth.uid())
   )
 );
@@ -447,8 +448,9 @@ FOR INSERT
 WITH CHECK (
   author_id = (SELECT auth.uid())
   AND EXISTS (
-    SELECT 1 FROM public.group_members
-    WHERE group_members.group_id = sticky_notes.group_id
+    SELECT 1 FROM public.partners
+    JOIN public.group_members ON group_members.group_id = partners.group_id
+    WHERE partners.id = sticky_notes.partner_id
     AND group_members.user_id = (SELECT auth.uid())
   )
 );
