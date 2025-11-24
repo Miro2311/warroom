@@ -87,17 +87,21 @@ export async function findMatchingPartnerIds(partnerId: string): Promise<string[
       return [partnerId];
     }
 
-    // Find all partners with same nickname + user_id
+    console.log(`Finding matching partners for: "${partner.nickname}" (user: ${partner.user_id})`);
+
+    // Find all partners with same nickname + user_id (case-insensitive)
     const { data: matchingPartners, error: matchError } = await supabase
       .from("partners")
-      .select("id")
-      .eq("nickname", partner.nickname)
-      .eq("user_id", partner.user_id);
+      .select("id, nickname, group_id")
+      .eq("user_id", partner.user_id)
+      .ilike("nickname", partner.nickname);
 
     if (matchError || !matchingPartners) {
       console.error("Error finding matching partners:", matchError);
       return [partnerId];
     }
+
+    console.log(`Found ${matchingPartners.length} matching partners:`, matchingPartners);
 
     return matchingPartners.map(p => p.id);
   } catch (error) {
