@@ -11,6 +11,8 @@ import {
   Home,
   Clock,
   Shield,
+  Edit3,
+  Check,
 } from "lucide-react";
 import { useAuth } from "@/contexts/AuthContext";
 import { OverviewTab } from "./tabs/OverviewTab";
@@ -48,6 +50,7 @@ export const PartnerDetailModal: React.FC<PartnerDetailModalProps> = ({
   const { user: authUser } = useAuth();
   const [editedPartner, setEditedPartner] = useState<PartnerNode | null>(partner);
   const [activeTab, setActiveTab] = useState("overview");
+  const [isEditing, setIsEditing] = useState(false);
 
   // Check if current user is the owner
   const isOwner = authUser?.id === partner?.user_id;
@@ -56,6 +59,7 @@ export const PartnerDetailModal: React.FC<PartnerDetailModalProps> = ({
   React.useEffect(() => {
     if (partner) {
       setEditedPartner({ ...partner });
+      setIsEditing(false); // Reset edit mode when opening new partner
     }
   }, [partner]);
 
@@ -111,44 +115,47 @@ export const PartnerDetailModal: React.FC<PartnerDetailModalProps> = ({
                   <div className="flex-1 min-w-0">
                     <div className="flex items-center gap-2 md:gap-4 flex-wrap">
                       {/* Always render Dialog.Title for accessibility */}
-                      {isOwner ? (
-                        <VisuallyHidden.Root>
-                          <Dialog.Title>
+                      {isEditing && isOwner ? (
+                        <>
+                          <VisuallyHidden.Root>
+                            <Dialog.Title>
+                              {partner.nickname}
+                            </Dialog.Title>
+                          </VisuallyHidden.Root>
+                          <input
+                            type="text"
+                            value={editedPartner.nickname}
+                            onChange={(e) =>
+                              handleUpdate({ nickname: e.target.value })
+                            }
+                            className="text-xl md:text-2xl font-display font-bold text-white uppercase tracking-wider bg-white/10 border border-white/20 px-2 md:px-3 py-1 rounded focus:outline-none focus:border-holo-cyan transition-colors w-full md:w-auto min-w-[200px]"
+                            aria-label="Partner nickname"
+                          />
+                          <select
+                            value={editedPartner.status}
+                            onChange={(e) =>
+                              handleUpdate({
+                                status: e.target.value as RelationshipStatus,
+                              })
+                            }
+                            className="bg-white/10 border border-white/20 px-2 md:px-3 py-2 rounded text-white font-display text-sm focus:outline-none focus:border-holo-cyan transition-colors min-h-[44px]"
+                          >
+                            {STATUS_OPTIONS.map((status) => (
+                              <option key={status} value={status}>
+                                {status}
+                              </option>
+                            ))}
+                          </select>
+                        </>
+                      ) : (
+                        <>
+                          <Dialog.Title className="text-xl md:text-2xl font-display font-bold text-white uppercase tracking-wider">
                             {partner.nickname}
                           </Dialog.Title>
-                        </VisuallyHidden.Root>
-                      ) : (
-                        <Dialog.Title className="text-xl md:text-2xl font-display font-bold text-white uppercase tracking-wider">
-                          {partner.nickname}
-                        </Dialog.Title>
-                      )}
-                      {isOwner && (
-                        <input
-                          type="text"
-                          value={editedPartner.nickname}
-                          onChange={(e) =>
-                            handleUpdate({ nickname: e.target.value })
-                          }
-                          className="text-xl md:text-2xl font-display font-bold text-white uppercase tracking-wider bg-white/10 border border-white/20 px-2 md:px-3 py-1 rounded focus:outline-none focus:border-holo-cyan transition-colors w-full md:w-auto min-w-[200px]"
-                          aria-label="Partner nickname"
-                        />
-                      )}
-                      {isOwner && (
-                        <select
-                          value={editedPartner.status}
-                          onChange={(e) =>
-                            handleUpdate({
-                              status: e.target.value as RelationshipStatus,
-                            })
-                          }
-                          className="bg-white/10 border border-white/20 px-2 md:px-3 py-2 rounded text-white font-display text-sm focus:outline-none focus:border-holo-cyan transition-colors min-h-[44px]"
-                        >
-                          {STATUS_OPTIONS.map((status) => (
-                            <option key={status} value={status}>
-                              {status}
-                            </option>
-                          ))}
-                        </select>
+                          <span className="px-3 py-1 bg-white/10 border border-white/20 rounded text-white font-display text-sm">
+                            {partner.status}
+                          </span>
+                        </>
                       )}
                     </div>
                     <VisuallyHidden.Root>
@@ -159,6 +166,31 @@ export const PartnerDetailModal: React.FC<PartnerDetailModalProps> = ({
                   </div>
 
                   <div className="flex items-center gap-2 md:gap-3">
+                    {/* Edit/Done Button - only for owners */}
+                    {isOwner && (
+                      <motion.button
+                        onClick={() => setIsEditing(!isEditing)}
+                        className={`px-4 py-2 rounded-lg flex items-center gap-2 font-mono text-sm uppercase tracking-wider transition-colors ${
+                          isEditing
+                            ? 'bg-toxic-green/20 border border-toxic-green text-toxic-green hover:bg-toxic-green/30'
+                            : 'bg-white/10 border border-white/20 text-white hover:bg-white/20'
+                        }`}
+                        whileHover={{ scale: 1.05 }}
+                        whileTap={{ scale: 0.95 }}
+                      >
+                        {isEditing ? (
+                          <>
+                            <Check className="w-4 h-4" />
+                            Done
+                          </>
+                        ) : (
+                          <>
+                            <Edit3 className="w-4 h-4" />
+                            Edit
+                          </>
+                        )}
+                      </motion.button>
+                    )}
                     {/* Close Button */}
                     <Dialog.Close asChild>
                       <motion.button
@@ -182,7 +214,7 @@ export const PartnerDetailModal: React.FC<PartnerDetailModalProps> = ({
                     <TabContent value="overview">
                       <OverviewTab
                         partner={partner}
-                        isEditing={isOwner}
+                        isEditing={isEditing && isOwner}
                         editedPartner={editedPartner}
                         onUpdate={handleUpdate}
                       />

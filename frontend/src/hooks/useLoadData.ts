@@ -5,6 +5,50 @@ import { supabase } from '@/lib/supabase'
 import { useStore } from '@/store/useStore'
 import { useAuth } from '@/contexts/AuthContext'
 
+async function copyPartnerImages(oldPartnerId: string, newPartnerId: string) {
+  try {
+    // Get all images for the old partner
+    const { data: images, error: fetchError } = await supabase
+      .from('partner_images')
+      .select('*')
+      .eq('partner_id', oldPartnerId)
+
+    if (fetchError) {
+      console.error('Error fetching partner images:', fetchError)
+      return
+    }
+
+    if (!images || images.length === 0) {
+      console.log('No images to copy for this partner')
+      return
+    }
+
+    // Copy each image to the new partner
+    for (const image of images) {
+      const { id, created_at, ...imageData } = image
+
+      const newImage = {
+        ...imageData,
+        partner_id: newPartnerId,
+      }
+
+      const { error: insertError } = await supabase
+        .from('partner_images')
+        .insert(newImage)
+
+      if (insertError) {
+        console.error('Error copying image:', insertError)
+      } else {
+        console.log(`Copied image for partner`)
+      }
+    }
+
+    console.log(`✅ Copied ${images.length} images`)
+  } catch (error) {
+    console.error('Error in copyPartnerImages:', error)
+  }
+}
+
 async function copyPartnersToNewGroup(userId: string, newGroupId: string) {
   try {
     // Find user's most recent group (that's not the new one)
@@ -38,14 +82,21 @@ async function copyPartnersToNewGroup(userId: string, newGroupId: string) {
         // Keep all other data (nickname, status, financial_total, etc.)
       }
 
-      const { error } = await supabase
+      const { data: insertedPartner, error } = await supabase
         .from('partners')
         .insert(newPartner)
+        .select()
+        .single()
 
       if (error) {
         console.error('Error copying partner:', error)
       } else {
         console.log(`Copied partner: ${partner.nickname}`)
+
+        // Copy partner images
+        if (insertedPartner) {
+          await copyPartnerImages(partner.id, insertedPartner.id)
+        }
       }
     }
 
