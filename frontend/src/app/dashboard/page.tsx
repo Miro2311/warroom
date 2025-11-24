@@ -26,6 +26,7 @@ export default function DashboardPage() {
   const [inviteCode, setInviteCode] = useState('')
   const [creating, setCreating] = useState(false)
   const [joining, setJoining] = useState(false)
+  const [copiedGroupId, setCopiedGroupId] = useState<string | null>(null)
 
   useEffect(() => {
     if (!authLoading && !user) {
@@ -247,6 +248,17 @@ export default function DashboardPage() {
     router.push('/')
   }
 
+  const copyInviteCode = async (code: string, groupId: string, e: React.MouseEvent) => {
+    e.stopPropagation() // Prevent group selection when clicking code
+    try {
+      await navigator.clipboard.writeText(code)
+      setCopiedGroupId(groupId)
+      setTimeout(() => setCopiedGroupId(null), 2000)
+    } catch (err) {
+      console.error('Failed to copy:', err)
+    }
+  }
+
   if (authLoading || loading) {
     return (
       <div className="min-h-screen w-full bg-black flex items-center justify-center">
@@ -334,8 +346,12 @@ export default function DashboardPage() {
                 </h3>
                 <div className="flex items-center gap-2 text-xs font-mono text-gray-400">
                   <span>CODE:</span>
-                  <code className="bg-white/10 px-2 py-1 rounded text-white">
-                    {group.invite_code}
+                  <code
+                    onClick={(e) => copyInviteCode(group.invite_code, group.id, e)}
+                    className="bg-white/10 hover:bg-white/20 px-2 py-1 rounded text-white cursor-pointer transition-colors"
+                    title="Click to copy"
+                  >
+                    {copiedGroupId === group.id ? 'COPIED!' : group.invite_code}
                   </code>
                 </div>
               </motion.button>

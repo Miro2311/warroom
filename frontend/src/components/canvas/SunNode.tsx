@@ -28,8 +28,10 @@ export const SunNode = ({ data }: SunNodeProps) => {
   const otherPartners = partners.filter(p => p.status !== "Signed");
   const isCheater = signedPartners.length >= 1 && otherPartners.length >= 1;
 
-  // Size increases based on level. Base size 80px + level * 10
-  const size = 80 + user.level * 10;
+  // Size increases based on level and username length
+  // Base size 80px + level * 10 + extra space for long names
+  const nameExtraSize = Math.max(0, (user.username.length - 8) * 5);
+  const size = 80 + user.level * 10 + nameExtraSize;
 
   // Get orbital data for each partner (excluding graveyard)
   const activePartners = partners.filter(p => p.status !== "Graveyard");
@@ -213,13 +215,7 @@ export const SunNode = ({ data }: SunNodeProps) => {
 
       <div className="z-10 text-center pointer-events-none px-2">
         <div
-          className={`font-display text-white font-bold tracking-wider uppercase drop-shadow-md ${
-            user.username.length <= 8
-              ? 'text-sm'
-              : user.username.length <= 12
-              ? 'text-xs'
-              : 'text-[10px]'
-          }`}
+          className="font-display text-white font-bold tracking-wider text-sm uppercase drop-shadow-md"
           style={{
             wordBreak: 'break-word',
             lineHeight: '1.2',
