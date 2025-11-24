@@ -80,28 +80,51 @@ export const usePartnerImages = (partnerId: string) => {
 
       if (uploadError) throw uploadError;
 
-      // Get current max display_order
-      const { data: existingImages } = await supabase
-        .from("partner_images")
-        .select("display_order")
-        .eq("partner_id", partnerId)
-        .order("display_order", { ascending: false })
-        .limit(1);
+      // Get current partner info to find matching partners in other groups
+      const { data: currentPartner } = await supabase
+        .from("partners")
+        .select("nickname, user_id")
+        .eq("id", partnerId)
+        .single();
 
-      const nextOrder = existingImages && existingImages.length > 0
-        ? existingImages[0].display_order + 1
-        : 0;
+      if (!currentPartner) throw new Error("Partner not found");
 
-      // Save to database
-      const { error: dbError } = await supabase
-        .from("partner_images")
-        .insert({
-          partner_id: partnerId,
-          image_url: fileName,
-          display_order: nextOrder,
-        });
+      // Find all partners with same nickname and user_id (across all groups)
+      const { data: matchingPartners } = await supabase
+        .from("partners")
+        .select("id")
+        .eq("nickname", currentPartner.nickname)
+        .eq("user_id", currentPartner.user_id);
 
-      if (dbError) throw dbError;
+      const partnerIds = matchingPartners?.map(p => p.id) || [partnerId];
+
+      // For each matching partner, add the image reference
+      for (const pid of partnerIds) {
+        // Get current max display_order for this partner
+        const { data: existingImages } = await supabase
+          .from("partner_images")
+          .select("display_order")
+          .eq("partner_id", pid)
+          .order("display_order", { ascending: false })
+          .limit(1);
+
+        const nextOrder = existingImages && existingImages.length > 0
+          ? existingImages[0].display_order + 1
+          : 0;
+
+        // Save to database
+        const { error: dbError } = await supabase
+          .from("partner_images")
+          .insert({
+            partner_id: pid,
+            image_url: fileName,
+            display_order: nextOrder,
+          });
+
+        if (dbError) {
+          console.error(`Error adding image to partner ${pid}:`, dbError);
+        }
+      }
 
       // Reload images
       await loadImages();
@@ -129,18 +152,19 @@ export const usePartnerImages = (partnerId: string) => {
 
       const imageToDelete = imageData[index];
 
-      // Delete from storage
+      // Delete from storage (only once, since all partners share the same file)
       const { error: storageError } = await supabase.storage
         .from("partner-images")
         .remove([imageToDelete.image_url]);
 
       if (storageError) throw storageError;
 
-      // Delete from database
+      // Delete from ALL partners that reference this image_url
+      // This ensures sync across groups
       const { error: dbError } = await supabase
         .from("partner_images")
         .delete()
-        .eq("id", imageToDelete.id);
+        .eq("image_url", imageToDelete.image_url);
 
       if (dbError) throw dbError;
 
@@ -171,13 +195,14 @@ export const usePartnerImages = (partnerId: string) => {
 
       if (storageError) throw storageError;
 
-      // Delete from database
-      const { error: dbError } = await supabase
-        .from("partner_images")
-        .delete()
-        .eq("partner_id", partnerId);
-
-      if (dbError) throw dbError;
+      // Delete from ALL partners that reference these image_urls
+      // This ensures sync across groups
+      for (const filePath of filePaths) {
+        await supabase
+          .from("partner_images")
+          .delete()
+          .eq("image_url", filePath);
+      }
 
       setImages([]);
       return true;

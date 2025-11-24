@@ -7,29 +7,35 @@ import { useAuth } from '@/contexts/AuthContext'
 
 async function copyPartnerImages(oldPartnerId: string, newPartnerId: string) {
   try {
+    console.log(`Copying images from partner ${oldPartnerId} to ${newPartnerId}`)
+
     // Get all images for the old partner
     const { data: images, error: fetchError } = await supabase
       .from('partner_images')
       .select('*')
       .eq('partner_id', oldPartnerId)
+      .order('display_order', { ascending: true })
 
     if (fetchError) {
       console.error('Error fetching partner images:', fetchError)
-      return
+      return 0
     }
 
     if (!images || images.length === 0) {
       console.log('No images to copy for this partner')
-      return
+      return 0
     }
 
-    // Copy each image to the new partner
-    for (const image of images) {
-      const { id, created_at, ...imageData } = image
+    console.log(`Found ${images.length} images to copy`)
 
+    // Copy each image to the new partner
+    // The image_url points to the same storage file, which is fine
+    let copiedCount = 0
+    for (const image of images) {
       const newImage = {
-        ...imageData,
         partner_id: newPartnerId,
+        image_url: image.image_url, // Same storage path - shared between partners
+        display_order: image.display_order,
       }
 
       const { error: insertError } = await supabase
@@ -39,13 +45,15 @@ async function copyPartnerImages(oldPartnerId: string, newPartnerId: string) {
       if (insertError) {
         console.error('Error copying image:', insertError)
       } else {
-        console.log(`Copied image for partner`)
+        copiedCount++
       }
     }
 
-    console.log(`✅ Copied ${images.length} images`)
+    console.log(`Copied ${copiedCount}/${images.length} images`)
+    return copiedCount
   } catch (error) {
     console.error('Error in copyPartnerImages:', error)
+    return 0
   }
 }
 
