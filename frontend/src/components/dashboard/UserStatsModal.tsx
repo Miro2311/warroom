@@ -465,7 +465,9 @@ export const UserStatsModal: React.FC<UserStatsModalProps> = ({
 
   if (!user) return null;
 
-  const stats = calculateUserStats(partners);
+  // Filter partners to only show those belonging to this user
+  const userPartners = partners.filter(partner => partner.user_id === user.id);
+  const stats = calculateUserStats(userPartners);
 
   return (
     <Dialog.Root open={isOpen} onOpenChange={onClose}>
