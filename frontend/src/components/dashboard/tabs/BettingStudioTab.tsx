@@ -186,7 +186,7 @@ export const BettingStudioTab: React.FC<BettingStudioTabProps> = ({
       // Silently handle table not existing yet
       if (error?.code === '42P01' || error?.message?.includes('relation') || error?.message?.includes('does not exist')) {
         console.warn("Betting tables not yet created. Please run DATABASE-BETTING-STUDIO.sql");
-        setUserBalance(1000); // Default starting balance
+        setUserBalance(0); // Default starting balance
       } else {
         console.error("Error loading user data:", error);
       }
@@ -411,7 +411,7 @@ export const BettingStudioTab: React.FC<BettingStudioTabProps> = ({
               </div>
             )}
 
-            <div className="grid grid-cols-2 gap-3">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
               {groupMembers.map((member) => (
                 <motion.button
                   key={member.id}
@@ -425,12 +425,14 @@ export const BettingStudioTab: React.FC<BettingStudioTabProps> = ({
                   whileTap={{ scale: 0.98 }}
                 >
                   <div className="flex items-center justify-between">
-                    <div className="flex items-center gap-3">
-                      <div className="w-10 h-10 rounded-full bg-gradient-to-br from-yellow-400 to-lust-pink flex items-center justify-center text-sm font-bold text-black">
+                    <div className="flex items-center gap-3 min-w-0 flex-1">
+                      <div className="w-10 h-10 rounded-full bg-gradient-to-br from-yellow-400 to-lust-pink flex items-center justify-center text-sm font-bold text-black flex-shrink-0">
                         {member.username.charAt(0).toUpperCase()}
                       </div>
-                      <div className="text-left">
-                        <div className="text-sm font-display font-bold text-white">
+                      <div className="text-left min-w-0 flex-1">
+                        <div className={`font-display font-bold text-white truncate ${
+                          member.username.length > 12 ? 'text-xs' : 'text-sm'
+                        }`}>
                           {member.username}
                         </div>
                         <div className="text-xs text-white/50 font-mono">
@@ -438,7 +440,7 @@ export const BettingStudioTab: React.FC<BettingStudioTabProps> = ({
                         </div>
                       </div>
                     </div>
-                    <div className="flex items-center gap-2">
+                    <div className="flex items-center gap-2 flex-shrink-0">
                       <span className="text-xl font-mono font-bold text-yellow-400">
                         {voteResults.get(member.id) || 0}
                       </span>

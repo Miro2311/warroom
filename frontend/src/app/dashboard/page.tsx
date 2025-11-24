@@ -325,13 +325,13 @@ export default function DashboardPage() {
         ) : (
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
             {groups.map((group, index) => (
-              <motion.button
+              <motion.div
                 key={group.id}
                 initial={{ opacity: 0, y: 20 }}
                 animate={{ opacity: 1, y: 0 }}
                 transition={{ delay: index * 0.1 }}
                 onClick={() => selectGroup(group.id)}
-                className="bg-black/60 backdrop-blur-sm border border-white/20 hover:border-white rounded-lg p-6 text-left transition-all hover:scale-105"
+                className="bg-black/60 backdrop-blur-sm border border-white/20 hover:border-white rounded-lg p-6 text-left transition-all hover:scale-105 cursor-pointer"
               >
                 <div className="flex items-start justify-between mb-4">
                   <div className="w-12 h-12 rounded-full bg-white/10 flex items-center justify-center">
@@ -354,7 +354,7 @@ export default function DashboardPage() {
                     {copiedGroupId === group.id ? 'COPIED!' : group.invite_code}
                   </code>
                 </div>
-              </motion.button>
+              </motion.div>
             ))}
           </div>
         )}
