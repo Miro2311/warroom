@@ -111,6 +111,7 @@ function WarRoomFlow() {
     moveToGraveyard,
     isUserStatsModalOpen,
     setUserStatsModalOpen,
+    selectedStatsUser,
   } = useStore();
   const [nodes, setNodes, onNodesChange] = useNodesState<Node>([]);
   const [edges, setEdges, onEdgesChange] = useEdgesState<Edge>([]);
@@ -881,7 +882,7 @@ function WarRoomFlow() {
 
       {/* User Stats Modal */}
       <UserStatsModal
-        user={user}
+        user={selectedStatsUser || user}
         partners={partners}
         isOpen={isUserStatsModalOpen}
         onClose={() => setUserStatsModalOpen(false)}

@@ -16,10 +16,12 @@ interface SunNodeProps {
 export const SunNode = ({ data }: SunNodeProps) => {
   const { user, partners = [] } = data;
   const setUserStatsModalOpen = useStore((state) => state.setUserStatsModalOpen);
+  const setSelectedStatsUser = useStore((state) => state.setSelectedStatsUser);
 
   // Click handler to open user stats modal
   const handleClick = (e: React.MouseEvent) => {
     e.stopPropagation();
+    setSelectedStatsUser(user);
     setUserStatsModalOpen(true);
   };
 

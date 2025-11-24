@@ -18,6 +18,7 @@ interface AppState {
   pendingGraveyardNodeId: string | null;
   // User stats modal state
   isUserStatsModalOpen: boolean;
+  selectedStatsUser: User | null;
   // XP/Level state
   levelUpResult: LevelUpResult | null;
   showLevelUpModal: boolean;
@@ -38,6 +39,7 @@ interface AppState {
   moveToGraveyard: (partnerId: string, cause: CauseOfDeath, customReason?: string) => void;
   // User stats modal actions
   setUserStatsModalOpen: (open: boolean) => void;
+  setSelectedStatsUser: (user: User | null) => void;
   // XP actions
   setLevelUpResult: (result: LevelUpResult | null) => void;
   setShowLevelUpModal: (show: boolean) => void;
@@ -55,6 +57,7 @@ export const useStore = create<AppState>((set, get) => ({
   warpingNodeId: null,
   pendingGraveyardNodeId: null,
   isUserStatsModalOpen: false,
+  selectedStatsUser: null,
   levelUpResult: null,
   showLevelUpModal: false,
   setUser: (user) => set({ user }),
@@ -88,6 +91,7 @@ export const useStore = create<AppState>((set, get) => ({
   setPendingGraveyardNodeId: (id) => set({ pendingGraveyardNodeId: id }),
   // User stats modal actions
   setUserStatsModalOpen: (open) => set({ isUserStatsModalOpen: open }),
+  setSelectedStatsUser: (user) => set({ selectedStatsUser: user }),
   // XP actions
   setLevelUpResult: (result) => set({ levelUpResult: result }),
   setShowLevelUpModal: (show) => set({ showLevelUpModal: show }),
