@@ -163,7 +163,7 @@ export const OverviewTab: React.FC<OverviewTabProps> = ({
       )}
 
       {/* Main Layout: Image Left, Stats Right */}
-      <div className="grid grid-cols-3 gap-6">
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
         {/* Left: Profile Image (1/3 width) */}
         <motion.div
           className="col-span-1"
@@ -292,12 +292,12 @@ export const OverviewTab: React.FC<OverviewTabProps> = ({
 
         {/* Right: Stats Grid (2/3 width) */}
         <motion.div
-          className="col-span-2"
+          className="col-span-1 md:col-span-2"
           initial={{ opacity: 0, x: 20 }}
           animate={{ opacity: 1, x: 0 }}
           transition={{ delay: 0.2 }}
         >
-          <div className="grid grid-cols-2 gap-4">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             {/* Row 1 - Two cards */}
             <StatCard
               title="Simp Index"
@@ -430,7 +430,7 @@ export const OverviewTab: React.FC<OverviewTabProps> = ({
       )}
 
       {/* Metadata */}
-      <div className="grid grid-cols-2 gap-4">
+      <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
         <motion.div
           className="p-4 rounded bg-white/5 border border-white/10"
           whileHover={{ scale: 1.02 }}
