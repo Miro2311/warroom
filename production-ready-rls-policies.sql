@@ -407,7 +407,7 @@ CREATE POLICY "Users can insert partner red flags in their groups"
 ON public.partner_red_flags
 FOR INSERT
 WITH CHECK (
-  reporter_id = (SELECT auth.uid())
+  reported_by_id = (SELECT auth.uid())
   AND EXISTS (
     SELECT 1 FROM public.partners
     JOIN public.group_members ON group_members.group_id = partners.group_id
