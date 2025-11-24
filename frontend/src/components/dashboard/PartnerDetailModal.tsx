@@ -29,6 +29,7 @@ interface PartnerDetailModalProps {
 const STATUS_OPTIONS: RelationshipStatus[] = [
   "Talking",
   "Dating",
+  "F+",
   "It's Complicated",
   "Signed",
   "Exclusive",

@@ -59,6 +59,7 @@ export const SunNode = ({ data }: SunNodeProps) => {
       case 'Exclusive': return '#00F0FF';  // Cyan
       case 'Signed': return '#4ADE80';     // Green
       case 'Dating': return '#C084FC';     // Purple
+      case 'F+': return '#FF007F';         // Lust Pink
       case 'Talking': return '#FB923C';    // Orange
       case "It's Complicated": return '#FACC15'; // Yellow
       default: return '#9CA3AF';

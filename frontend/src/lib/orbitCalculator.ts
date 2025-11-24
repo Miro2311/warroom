@@ -21,6 +21,7 @@ const STATUS_WEIGHTS: Record<RelationshipStatus, number> = {
   'Exclusive': 1.0,           // Closest orbit
   'Signed': 0.85,             // Close (committed)
   'Dating': 0.7,              // Close-medium
+  'F+': 0.6,                  // Friends with benefits
   'It\'s Complicated': 0.5,   // Medium
   'Talking': 0.3,             // Far
   'Graveyard': 0.1,          // Void (drifting away)
@@ -44,6 +45,7 @@ const FIXED_ORBIT_RADII: Record<RelationshipStatus, number> = {
   'Exclusive': 200,        // Closest - committed relationship
   'Signed': 250,           // Very close - official/serious
   'Dating': 350,           // Medium distance - dating phase
+  'F+': 400,               // Friends with benefits
   'Talking': 450,          // Further out - getting to know
   'It\'s Complicated': 550, // Far - unclear relationship
   'Graveyard': 750,        // Furthest - relationship ended

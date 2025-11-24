@@ -160,23 +160,32 @@ export const FinancialTab: React.FC<FinancialTabProps> = ({ partner }) => {
     }
   };
 
+  // Calculate totals from events (your spending - her spending = net)
+  const yourTotal = events.reduce((sum, e) => sum + (e.amount || 0), 0);
+  const herTotal = events.reduce((sum, e) => sum + (e.partner_amount || 0), 0);
+  const netTotal = yourTotal - herTotal; // Can be negative if she spent more
+
   // Calculate expense breakdown by category
   const expensesByCategory = CATEGORIES.map((category) => {
     const categoryEvents = events.filter((e) => e.category === category);
     const amount = categoryEvents.reduce((sum, e) => sum + (e.amount || 0), 0);
-    const percentage = partner.financial_total > 0 ? (amount / partner.financial_total) * 100 : 0;
+    const partnerAmount = categoryEvents.reduce((sum, e) => sum + (e.partner_amount || 0), 0);
+    const netAmount = amount - partnerAmount;
+    const percentage = Math.abs(netTotal) > 0 ? (Math.abs(netAmount) / Math.abs(netTotal)) * 100 : 0;
 
     return {
       category,
-      amount,
+      amount: netAmount,
+      yourAmount: amount,
+      herAmount: partnerAmount,
       percentage,
       ...CATEGORY_COLORS[category],
     };
-  }).filter((exp) => exp.amount > 0);
+  }).filter((exp) => exp.yourAmount > 0 || exp.herAmount > 0);
 
-  const roi = partner.financial_total / Math.max(partner.intimacy_score, 1);
+  const roi = netTotal / Math.max(partner.intimacy_score, 1);
   const monthlyBurn =
-    partner.financial_total /
+    netTotal /
     Math.max(
       Math.floor(
         (Date.now() - new Date(partner.created_at).getTime()) /
@@ -346,27 +355,38 @@ export const FinancialTab: React.FC<FinancialTabProps> = ({ partner }) => {
       )}
 
       {/* Top Metrics */}
-      <div className="grid grid-cols-3 gap-4">
+      <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
         <StatCard
-          title="Total Spent"
-          value={<MetricDisplay value={partner.financial_total} prefix="$" decimals={2} />}
-          subtitle={`${events.length} expenses`}
+          title="Your Spending"
+          value={<MetricDisplay value={yourTotal} prefix="$" decimals={2} />}
+          subtitle="total spent by you"
           icon={<Wallet className="w-5 h-5" />}
           variant="default"
         />
         <StatCard
-          title="Monthly Burn"
-          value={<MetricDisplay value={monthlyBurn} prefix="$" decimals={2} />}
-          subtitle="avg per month"
+          title="Her Spending"
+          value={<MetricDisplay value={herTotal} prefix="$" decimals={2} />}
+          subtitle="gifts & paid dates"
+          icon={<Wallet className="w-5 h-5" />}
+          variant="success"
+        />
+        <StatCard
+          title="Net Balance"
+          value={
+            <span className={netTotal < 0 ? "text-toxic-green" : netTotal > 0 ? "text-yellow-400" : "text-white"}>
+              {netTotal < 0 ? "+$" : netTotal > 0 ? "-$" : "$"}{Math.abs(netTotal).toFixed(2)}
+            </span>
+          }
+          subtitle={netTotal < 0 ? "she spent more" : netTotal > 0 ? "you spent more" : "balanced"}
           icon={<TrendingUp className="w-5 h-5" />}
-          variant={monthlyBurn > 200 ? "warning" : "default"}
+          variant={netTotal < 0 ? "success" : netTotal > 200 ? "warning" : "default"}
         />
         <StatCard
           title="Cost per Intimacy"
-          value={<MetricDisplay value={roi} prefix="$" decimals={2} />}
+          value={<MetricDisplay value={Math.abs(roi)} prefix={roi < 0 ? "+$" : "$"} decimals={2} />}
           subtitle="ROI metric"
           icon={<CreditCard className="w-5 h-5" />}
-          variant={roi > 50 ? "danger" : "default"}
+          variant={roi > 50 ? "danger" : roi < 0 ? "success" : "default"}
         />
       </div>
 
@@ -525,8 +545,17 @@ export const FinancialTab: React.FC<FinancialTabProps> = ({ partner }) => {
                   </div>
                 </div>
                 <div className="flex items-center gap-3">
-                  <div className="text-lg font-mono font-bold text-yellow-400">
-                    -${event.amount?.toFixed(2) || '0.00'}
+                  <div className="flex flex-col items-end">
+                    {event.amount && event.amount > 0 && (
+                      <div className="text-sm font-mono font-bold text-yellow-400">
+                        You: -${event.amount.toFixed(2)}
+                      </div>
+                    )}
+                    {event.partner_amount && event.partner_amount > 0 && (
+                      <div className="text-sm font-mono font-bold text-toxic-green">
+                        Her: +${event.partner_amount.toFixed(2)}
+                      </div>
+                    )}
                   </div>
                   <motion.button
                     onClick={() => handleDeleteEvent(event.id)}

@@ -1,6 +1,7 @@
 export type RelationshipStatus =
   | "Talking"
   | "Dating"
+  | "F+"
   | "It's Complicated"
   | "Signed"
   | "Exclusive"
