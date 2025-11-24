@@ -57,14 +57,32 @@ export const AddPlanetModal: React.FC<AddPlanetModalProps> = ({ isOpen, onClose 
       console.log("Partner created successfully:", data);
 
       // Sync to all other groups the user is in
-      await syncNewPartner(user.id, currentGroupId, {
-        id: data.id,
-        nickname: data.nickname,
-        status: data.status,
-        financial_total: data.financial_total,
-        time_total: data.time_total,
-        intimacy_score: data.intimacy_score,
+      console.log("About to call syncNewPartner with:", {
+        userId: user.id,
+        currentGroupId,
+        partnerData: {
+          id: data.id,
+          nickname: data.nickname,
+          status: data.status,
+          financial_total: data.financial_total,
+          time_total: data.time_total,
+          intimacy_score: data.intimacy_score,
+        }
       });
+
+      try {
+        await syncNewPartner(user.id, currentGroupId, {
+          id: data.id,
+          nickname: data.nickname,
+          status: data.status,
+          financial_total: data.financial_total,
+          time_total: data.time_total,
+          intimacy_score: data.intimacy_score,
+        });
+        console.log("syncNewPartner completed successfully");
+      } catch (syncError) {
+        console.error("syncNewPartner failed:", syncError);
+      }
 
       // Add to store
       addPartner(data);

@@ -28,9 +28,10 @@ export async function syncNewPartner(
     intimacy_score: number;
   }
 ): Promise<void> {
-  try {
-    console.log(`syncNewPartner called for "${partnerData.nickname}" (user: ${userId}, group: ${originalGroupId})`);
+  console.log("=== syncNewPartner START ===");
+  console.log(`syncNewPartner called for "${partnerData.nickname}" (user: ${userId}, group: ${originalGroupId})`);
 
+  try {
     // Find all groups the user is a member of (except the original)
     const { data: memberships, error: memberError } = await supabase
       .from("group_members")
@@ -75,6 +76,7 @@ export async function syncNewPartner(
   } catch (error) {
     console.error("Error in syncNewPartner:", error);
   }
+  console.log("=== syncNewPartner END ===");
 }
 
 /**
