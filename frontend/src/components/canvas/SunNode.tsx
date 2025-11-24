@@ -80,11 +80,12 @@ export const SunNode = ({ data }: SunNodeProps) => {
           style={{
             width: orbit.radius * 2,
             height: orbit.radius * 2,
-            border: `1px solid ${getOrbitColor(orbit.status)}`,
-            opacity: 0.15,
+            border: `2px solid ${getOrbitColor(orbit.status)}`,
+            opacity: 0.45,
             left: '50%',
             top: '50%',
             transform: 'translate(-50%, -50%)',
+            boxShadow: `0 0 20px ${getOrbitColor(orbit.status)}80, 0 0 40px ${getOrbitColor(orbit.status)}40, inset 0 0 20px ${getOrbitColor(orbit.status)}20`,
           }}
         />
       ))}

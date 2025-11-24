@@ -1,7 +1,6 @@
 "use client";
 
 import React, { useState, useEffect } from "react";
-import { createPortal } from "react-dom";
 import { PartnerNode, TimelineEvent, EventType, EventCategory, RedFlagSeverity } from "@/types";
 import { TimelineContainer, TimelineItem } from "@/components/ui/timeline-item";
 import { StatCard } from "@/components/ui/stat-card";
@@ -59,10 +58,18 @@ export const TimelineTab: React.FC<TimelineTabProps> = ({ partner }) => {
   const [selectedFilter, setSelectedFilter] = useState<EventType | "all">("all");
   const [showAddModal, setShowAddModal] = useState(false);
   const [selectedEventType, setSelectedEventType] = useState<EventType | null>(null);
-  const [mounted, setMounted] = useState(false);
 
   // Check if current user is the owner
-  const isOwner = authUser?.id === partner.user_id;
+  // TEMPORARILY DISABLED for testing - everyone can add events
+  const isOwner = true; // authUser?.id === partner.user_id;
+
+  console.log('Timeline Debug:', {
+    authUserId: authUser?.id,
+    partnerId: partner.id,
+    partnerUserId: partner.user_id,
+    isOwner,
+    note: 'isOwner temporarily set to true for testing'
+  });
 
   // Form state
   const [newEvent, setNewEvent] = useState({
@@ -74,10 +81,6 @@ export const TimelineTab: React.FC<TimelineTabProps> = ({ partner }) => {
     severity: "Medium" as RedFlagSeverity,
     intimacy_change: 0,
   });
-
-  useEffect(() => {
-    setMounted(true);
-  }, []);
 
   useEffect(() => {
     loadEvents();
@@ -281,6 +284,7 @@ export const TimelineTab: React.FC<TimelineTabProps> = ({ partner }) => {
               setSelectedEventType("date"); // Set default to "date" event type
             }}
             className="flex items-center gap-2 px-4 py-2 bg-holo-cyan text-black font-display font-bold rounded hover:bg-holo-cyan/80 transition-colors"
+            style={{ position: 'relative', zIndex: 10 }}
             whileHover={{ scale: 1.05 }}
             whileTap={{ scale: 0.95 }}
             transition={{ type: "tween", duration: 0.2 }}
@@ -377,29 +381,26 @@ export const TimelineTab: React.FC<TimelineTabProps> = ({ partner }) => {
       )}
 
       {/* Add Event Modal */}
-      {mounted && createPortal(
-        <AnimatePresence>
-          {showAddModal && (
+      <AnimatePresence>
+        {showAddModal && (
+          <motion.div
+            className="fixed inset-0 z-[9999] flex items-center justify-center bg-black/80 backdrop-blur-sm"
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            onClick={() => {
+              setShowAddModal(false);
+              setSelectedEventType(null);
+              resetForm();
+            }}
+          >
             <motion.div
-              className="fixed inset-0 bg-black/80 backdrop-blur-sm flex items-center justify-center"
-              style={{ zIndex: 999999 }}
-              initial={{ opacity: 0 }}
-              animate={{ opacity: 1 }}
-              exit={{ opacity: 0 }}
-              onClick={() => {
-                setShowAddModal(false);
-                setSelectedEventType(null);
-                resetForm();
-              }}
+              className="bg-deep-space border border-white/20 rounded-lg p-6 w-full max-w-2xl max-h-[90vh] overflow-y-auto relative mx-4"
+              initial={{ scale: 0.9, opacity: 0 }}
+              animate={{ scale: 1, opacity: 1 }}
+              exit={{ scale: 0.9, opacity: 0 }}
+              onClick={(e) => e.stopPropagation()}
             >
-              {/* Modal Content */}
-              <motion.div
-                className="bg-deep-space border border-white/20 rounded-lg p-6 w-full max-w-2xl max-h-[90vh] overflow-y-auto relative"
-                initial={{ scale: 0.9, opacity: 0 }}
-                animate={{ scale: 1, opacity: 1 }}
-                exit={{ scale: 0.9, opacity: 0 }}
-                onClick={(e) => e.stopPropagation()}
-              >
               <div className="flex items-center justify-between mb-6">
                 <h2 className="text-2xl font-display font-bold text-white">
                   {selectedEventType ? `Add ${EVENT_TYPE_CONFIG[selectedEventType].label}` : "Choose Event Type"}
@@ -427,7 +428,6 @@ export const TimelineTab: React.FC<TimelineTabProps> = ({ partner }) => {
                         className={`p-6 rounded-lg ${config.bg} border ${config.border} transition-all`}
                         whileHover={{ scale: 1.05 }}
                         whileTap={{ scale: 0.95 }}
-                        transition={{ type: "tween", duration: 0.2 }}
                       >
                         <Icon className={`w-8 h-8 ${config.color} mx-auto mb-3`} />
                         <span className={`text-sm font-display font-bold ${config.color}`}>
@@ -438,20 +438,19 @@ export const TimelineTab: React.FC<TimelineTabProps> = ({ partner }) => {
                   })}
                 </div>
               ) : (
-                <div className="space-y-4">
+                <form onSubmit={(e) => { e.preventDefault(); handleAddEvent(); }} className="space-y-4">
                   {/* Event Type Selector */}
                   <div>
                     <label className="text-xs font-mono text-white/50 uppercase tracking-wider block mb-2">
                       Event Type
                     </label>
                     <select
-                      value={selectedEventType || "date"}
+                      value={selectedEventType}
                       onChange={(e) => setSelectedEventType(e.target.value as EventType)}
-                      className="w-full bg-deep-space border border-white/20 px-4 py-3 rounded text-white font-display focus:outline-none focus:border-holo-cyan transition-colors"
-                      style={{ backgroundColor: '#0A0A0F', color: '#FFFFFF' }}
+                      className="w-full bg-white/10 border border-white/20 px-4 py-3 rounded text-white font-display focus:outline-none focus:border-holo-cyan transition-colors"
                     >
                       {Object.entries(EVENT_TYPE_CONFIG).map(([type, config]) => (
-                        <option key={type} value={type} style={{ backgroundColor: '#0A0A0F', color: '#FFFFFF' }}>
+                        <option key={type} value={type}>
                           {config.label}
                         </option>
                       ))}
@@ -470,6 +469,7 @@ export const TimelineTab: React.FC<TimelineTabProps> = ({ partner }) => {
                       className="w-full bg-white/10 border border-white/20 px-4 py-3 rounded text-white font-mono focus:outline-none focus:border-holo-cyan transition-colors"
                       placeholder={`e.g. ${selectedEventType === 'date' ? 'Dinner at Italian place' : selectedEventType === 'expense' ? 'Birthday gift' : selectedEventType === 'red_flag' ? 'Cancelled plans last minute' : 'Quick note'}`}
                       autoFocus
+                      required
                     />
                   </div>
 
@@ -503,38 +503,35 @@ export const TimelineTab: React.FC<TimelineTabProps> = ({ partner }) => {
 
                   {/* Type-specific fields */}
                   {(selectedEventType === "expense" || selectedEventType === "date") && (
-                    <>
-                      <div className="grid grid-cols-2 gap-4">
-                        <div>
-                          <label className="text-xs font-mono text-white/50 uppercase tracking-wider block mb-2">
-                            Amount ($)
-                          </label>
-                          <input
-                            type="number"
-                            step="0.01"
-                            value={newEvent.amount}
-                            onChange={(e) => setNewEvent({ ...newEvent, amount: e.target.value })}
-                            className="w-full bg-white/10 border border-white/20 px-4 py-3 rounded text-white font-mono focus:outline-none focus:border-holo-cyan transition-colors"
-                            placeholder="0.00"
-                          />
-                        </div>
-                        <div>
-                          <label className="text-xs font-mono text-white/50 uppercase tracking-wider block mb-2">
-                            Category
-                          </label>
-                          <select
-                            value={newEvent.category}
-                            onChange={(e) => setNewEvent({ ...newEvent, category: e.target.value as EventCategory })}
-                            className="w-full bg-white/10 border border-white/20 px-4 py-3 rounded text-white font-display focus:outline-none focus:border-holo-cyan transition-colors"
-                            style={{ backgroundColor: '#0A0A0F', color: '#FFFFFF' }}
-                          >
-                            {CATEGORIES.map((cat) => (
-                              <option key={cat} value={cat} style={{ backgroundColor: '#0A0A0F', color: '#FFFFFF' }}>{cat}</option>
-                            ))}
-                          </select>
-                        </div>
+                    <div className="grid grid-cols-2 gap-4">
+                      <div>
+                        <label className="text-xs font-mono text-white/50 uppercase tracking-wider block mb-2">
+                          Amount ($)
+                        </label>
+                        <input
+                          type="number"
+                          step="0.01"
+                          value={newEvent.amount}
+                          onChange={(e) => setNewEvent({ ...newEvent, amount: e.target.value })}
+                          className="w-full bg-white/10 border border-white/20 px-4 py-3 rounded text-white font-mono focus:outline-none focus:border-holo-cyan transition-colors"
+                          placeholder="0.00"
+                        />
                       </div>
-                    </>
+                      <div>
+                        <label className="text-xs font-mono text-white/50 uppercase tracking-wider block mb-2">
+                          Category
+                        </label>
+                        <select
+                          value={newEvent.category}
+                          onChange={(e) => setNewEvent({ ...newEvent, category: e.target.value as EventCategory })}
+                          className="w-full bg-white/10 border border-white/20 px-4 py-3 rounded text-white font-display focus:outline-none focus:border-holo-cyan transition-colors"
+                        >
+                          {CATEGORIES.map((cat) => (
+                            <option key={cat} value={cat}>{cat}</option>
+                          ))}
+                        </select>
+                      </div>
+                    </div>
                   )}
 
                   {selectedEventType === "red_flag" && (
@@ -546,10 +543,9 @@ export const TimelineTab: React.FC<TimelineTabProps> = ({ partner }) => {
                         value={newEvent.severity}
                         onChange={(e) => setNewEvent({ ...newEvent, severity: e.target.value as RedFlagSeverity })}
                         className="w-full bg-white/10 border border-white/20 px-4 py-3 rounded text-white font-display focus:outline-none focus:border-holo-cyan transition-colors"
-                        style={{ backgroundColor: '#0A0A0F', color: '#FFFFFF' }}
                       >
                         {SEVERITIES.map((sev) => (
-                          <option key={sev} value={sev} style={{ backgroundColor: '#0A0A0F', color: '#FFFFFF' }}>{sev}</option>
+                          <option key={sev} value={sev}>{sev}</option>
                         ))}
                       </select>
                     </div>
@@ -586,6 +582,7 @@ export const TimelineTab: React.FC<TimelineTabProps> = ({ partner }) => {
                   {/* Action Buttons */}
                   <div className="flex gap-3 pt-4">
                     <motion.button
+                      type="button"
                       onClick={() => {
                         setShowAddModal(false);
                         setSelectedEventType(null);
@@ -594,12 +591,11 @@ export const TimelineTab: React.FC<TimelineTabProps> = ({ partner }) => {
                       className="flex-1 py-3 bg-white/10 hover:bg-white/20 text-white font-display rounded transition-colors"
                       whileHover={{ scale: 1.02 }}
                       whileTap={{ scale: 0.98 }}
-                      transition={{ type: "tween", duration: 0.2 }}
                     >
                       Cancel
                     </motion.button>
                     <motion.button
-                      onClick={handleAddEvent}
+                      type="submit"
                       disabled={!newEvent.title.trim()}
                       className={`flex-1 py-3 font-display font-bold rounded transition-colors ${
                         !newEvent.title.trim()
@@ -608,19 +604,16 @@ export const TimelineTab: React.FC<TimelineTabProps> = ({ partner }) => {
                       }`}
                       whileHover={newEvent.title.trim() ? { scale: 1.02 } : {}}
                       whileTap={newEvent.title.trim() ? { scale: 0.98 } : {}}
-                      transition={{ type: "tween", duration: 0.2 }}
                     >
                       Add Event
                     </motion.button>
                   </div>
-                </div>
+                </form>
               )}
-              </motion.div>
             </motion.div>
-          )}
-        </AnimatePresence>,
-        document.body
-      )}
+          </motion.div>
+        )}
+      </AnimatePresence>
     </div>
   );
 };

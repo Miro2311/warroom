@@ -42,21 +42,34 @@ export default function DashboardPage() {
   const loadGroups = async () => {
     setLoading(true)
 
+    console.log('=== LOADING GROUPS DEBUG ===')
+    console.log('User ID:', user?.id)
+
     // Get all groups where the user is a member
-    const { data: memberData } = await supabase
+    const { data: memberData, error: memberError } = await supabase
       .from('group_members')
       .select('group_id')
       .eq('user_id', user?.id)
 
+    console.log('Member data:', memberData)
+    console.log('Member error:', memberError)
+
     if (memberData && memberData.length > 0) {
       const groupIds = memberData.map((m) => m.group_id)
-      const { data: groupsData } = await supabase
+      console.log('Group IDs:', groupIds)
+
+      const { data: groupsData, error: groupsError } = await supabase
         .from('groups')
         .select('*')
         .in('id', groupIds)
         .order('created_at', { ascending: false })
 
+      console.log('Groups data:', groupsData)
+      console.log('Groups error:', groupsError)
+
       setGroups(groupsData || [])
+    } else {
+      console.log('No member data found')
     }
 
     setLoading(false)
@@ -100,7 +113,7 @@ export default function DashboardPage() {
 
       console.log('Group created successfully:', groupData)
 
-      // Add creator as member
+      // Add creator as member - CRITICAL: This must succeed or group is orphaned
       const { error: memberError } = await supabase.from('group_members').insert({
         group_id: groupData.id,
         user_id: user.id,
@@ -109,16 +122,41 @@ export default function DashboardPage() {
 
       if (memberError) {
         console.error('Error adding member:', memberError)
-        alert(`Group created but failed to add you as member: ${memberError.message}`)
+
+        // CLEANUP: Delete the orphaned group since creator is not a member
+        console.log('Attempting to cleanup orphaned group...')
+        const { error: deleteError } = await supabase
+          .from('groups')
+          .delete()
+          .eq('id', groupData.id)
+
+        if (deleteError) {
+          console.error('Failed to cleanup orphaned group:', deleteError)
+          alert(
+            `CRITICAL: Group was created but you were not added as member. ` +
+            `Group ID: ${groupData.id}. Please contact support or manually delete this group.`
+          )
+        } else {
+          console.log('Orphaned group cleaned up successfully')
+          alert(
+            `Failed to add you as group member. The group was automatically deleted. ` +
+            `Error: ${memberError.message}. Please try again.`
+          )
+        }
+
         setCreating(false)
         return
       }
 
       console.log('Member added successfully')
 
+      // Success - reset form and reload groups
       setNewGroupName('')
       setShowCreateModal(false)
       setCreating(false)
+
+      // Wait a moment before reloading to ensure DB consistency
+      await new Promise(resolve => setTimeout(resolve, 500))
       loadGroups()
     } catch (err) {
       console.error('Unexpected error:', err)
@@ -132,44 +170,75 @@ export default function DashboardPage() {
 
     setJoining(true)
 
-    // Find group by invite code
-    const { data: groupData, error: findError } = await supabase
-      .from('groups')
-      .select('*')
-      .eq('invite_code', inviteCode.toUpperCase())
-      .single()
+    try {
+      // Find group by invite code
+      const { data: groupData, error: findError } = await supabase
+        .from('groups')
+        .select('*')
+        .eq('invite_code', inviteCode.toUpperCase())
+        .single()
 
-    if (findError || !groupData) {
-      alert('Invalid invite code')
+      if (findError || !groupData) {
+        console.error('Error finding group:', findError)
+        alert('Invalid invite code')
+        setJoining(false)
+        return
+      }
+
+      // Check if already a member
+      const { data: existingMember, error: checkError } = await supabase
+        .from('group_members')
+        .select('*')
+        .eq('group_id', groupData.id)
+        .eq('user_id', user.id)
+        .single()
+
+      // Ignore PGRST116 error (no rows found) - this is expected for new members
+      if (checkError && checkError.code !== 'PGRST116') {
+        console.error('Error checking membership:', checkError)
+        alert(`Error checking group membership: ${checkError.message}`)
+        setJoining(false)
+        return
+      }
+
+      if (existingMember) {
+        alert('You are already a member of this group')
+        setJoining(false)
+        return
+      }
+
+      // Add as member
+      const { error: insertError } = await supabase.from('group_members').insert({
+        group_id: groupData.id,
+        user_id: user.id,
+        role: 'member',
+      })
+
+      if (insertError) {
+        console.error('Error joining group:', insertError)
+        alert(
+          `Failed to join group: ${insertError.message}. ` +
+          `Please try again or contact support if the problem persists.`
+        )
+        setJoining(false)
+        return
+      }
+
+      console.log('Successfully joined group:', groupData.name)
+
+      // Success - reset form and reload groups
+      setInviteCode('')
+      setShowJoinModal(false)
       setJoining(false)
-      return
-    }
 
-    // Check if already a member
-    const { data: existingMember } = await supabase
-      .from('group_members')
-      .select('*')
-      .eq('group_id', groupData.id)
-      .eq('user_id', user.id)
-      .single()
-
-    if (existingMember) {
-      alert('You are already a member of this group')
+      // Wait a moment before reloading to ensure DB consistency
+      await new Promise(resolve => setTimeout(resolve, 500))
+      loadGroups()
+    } catch (err) {
+      console.error('Unexpected error joining group:', err)
+      alert(`Unexpected error: ${err instanceof Error ? err.message : 'Unknown error'}`)
       setJoining(false)
-      return
     }
-
-    // Add as member
-    await supabase.from('group_members').insert({
-      group_id: groupData.id,
-      user_id: user.id,
-      role: 'member',
-    })
-
-    setInviteCode('')
-    setShowJoinModal(false)
-    setJoining(false)
-    loadGroups()
   }
 
   const selectGroup = (groupId: string) => {

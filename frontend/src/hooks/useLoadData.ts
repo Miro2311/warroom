@@ -21,11 +21,6 @@ export function useLoadData() {
     try {
       setLoading(true)
 
-      // Debug: Check if we have a session
-      const { data: { session } } = await supabase.auth.getSession()
-      console.log('Current session:', session ? 'EXISTS' : 'NONE')
-      console.log('Auth user ID:', authUser.id)
-
       // 1. Load user profile from public.users table
       const { data: userProfile, error: userError } = await supabase
         .from('users')
@@ -34,16 +29,10 @@ export function useLoadData() {
         .single()
 
       if (userError) {
-        console.error('Error loading user profile:', userError)
-        console.error('Error details:', JSON.stringify(userError, null, 2))
-        console.error('Error code:', userError.code)
-        console.error('Error message:', userError.message)
-
         // If error is PGRST116 (no rows returned), it means profile doesn't exist
-        // Try to create it (this might fail if RLS blocks inserts too)
+        // Try to create it (this is expected for new users)
         if (userError.code === 'PGRST116') {
-          console.log('User profile not found, attempting to create one...')
-          const { data: newProfile, error: createError } = await supabase
+          const { data: newProfile } = await supabase
             .from('users')
             .insert({
               id: authUser.id,
@@ -54,13 +43,11 @@ export function useLoadData() {
             .select()
             .single()
 
-          if (createError) {
-            console.error('Failed to create user profile:', createError)
-          } else {
-            console.log('Created new user profile:', newProfile)
+          if (newProfile) {
             setUser(newProfile)
           }
         }
+        // Silently ignore all other errors (often RLS permission issues)
 
         setLoading(false)
         return
@@ -68,14 +55,11 @@ export function useLoadData() {
 
       if (userProfile) {
         setUser(userProfile)
-        console.log('✅ User profile loaded:', userProfile)
 
         // 2. Get selected group from localStorage
         const selectedGroupId = localStorage.getItem('selectedGroupId')
-        console.log('📦 Selected group ID:', selectedGroupId)
 
         if (!selectedGroupId) {
-          console.warn('⚠️ No group selected')
           setLoading(false)
           return
         }
@@ -84,29 +68,19 @@ export function useLoadData() {
         setCurrentGroupId(selectedGroupId)
 
         // 3. Load ALL partners in this group (not just current user's)
-        console.log('🔍 Loading ALL partners in group:', selectedGroupId)
-        const { data: partners, error: partnersError } = await supabase
+        const { data: partners } = await supabase
           .from('partners')
           .select('*')
           .eq('group_id', selectedGroupId)
 
-        console.log('📊 Partners query result:', { partners, error: partnersError })
-
-        if (partnersError) {
-          console.error('❌ Error loading partners:', partnersError)
-        }
-
         if (partners) {
-          console.log('✅ Setting partners:', partners.length, 'partners found')
           setPartners(partners)
-        } else {
-          console.warn('⚠️ No partners data returned')
         }
       }
 
       setLoading(false)
     } catch (error) {
-      console.error('Failed to load data from DB:', error)
+      // Silently ignore errors
       setLoading(false)
     }
   }

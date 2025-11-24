@@ -399,7 +399,7 @@ function WarRoomFlow() {
     // Sort users by ID to ensure consistent order for everyone
     const sortedUsers = [...allGroupUsers].sort((a, b) => a.id.localeCompare(b.id));
 
-    const minSunDistance = 700; // Minimum distance between suns
+    const minSunDistance = 1100; // Minimum distance between suns
     const absolutePositions = new Map<string, { x: number; y: number }>();
     const existingPositions: { x: number; y: number }[] = [];
 

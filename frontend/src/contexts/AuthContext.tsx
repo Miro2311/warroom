@@ -43,16 +43,68 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   }, [])
 
   const signIn = async (email: string, password: string) => {
-    const { error } = await supabase.auth.signInWithPassword({
+    const { data, error } = await supabase.auth.signInWithPassword({
       email,
       password,
     })
 
-    if (!error) {
-      router.push('/dashboard')
+    if (error) {
+      return { error }
     }
 
-    return { error }
+    if (!data.user) {
+      return { error: new Error('Sign in succeeded but no user data returned') }
+    }
+
+    // Check if user profile exists, create if not
+    const { data: existingProfile, error: profileError } = await supabase
+      .from('users')
+      .select('id')
+      .eq('id', data.user.id)
+      .single()
+
+    // If error is PGRST116 (no rows), profile doesn't exist - create it
+    if (profileError && profileError.code === 'PGRST116') {
+      console.log('User profile does not exist, creating...')
+
+      const { error: insertError } = await supabase
+        .from('users')
+        .insert({
+          id: data.user.id,
+          username: data.user.email?.split('@')[0] || 'User',
+          current_xp: 0,
+          level: 1,
+        })
+
+      if (insertError) {
+        console.error('Error creating user profile during sign in:', insertError)
+        return {
+          error: new Error(
+            `Failed to create user profile: ${insertError.message}. ` +
+            `Please contact support or try signing up again.`
+          )
+        }
+      }
+
+      console.log('User profile created successfully')
+    } else if (profileError) {
+      // Some other error occurred while checking for profile
+      console.error('Error checking for user profile:', profileError)
+      return {
+        error: new Error(
+          `Failed to verify user profile: ${profileError.message}. ` +
+          `Please try again or contact support.`
+        )
+      }
+    }
+
+    console.log('Sign in successful, profile exists')
+
+    // Wait a moment to ensure DB consistency before routing
+    await new Promise(resolve => setTimeout(resolve, 300))
+
+    router.push('/dashboard')
+    return { error: null }
   }
 
   const signUp = async (email: string, password: string, username: string) => {
@@ -66,25 +118,48 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       },
     })
 
-    if (!error && data.user) {
-      // Create user profile in public.users table
-      const { error: profileError } = await supabase
-        .from('users')
-        .insert({
-          id: data.user.id,
-          username,
-          current_xp: 0,
-          level: 1,
-        })
-
-      if (profileError) {
-        console.error('Error creating user profile:', profileError)
-      }
-
-      router.push('/dashboard')
+    if (error) {
+      return { error }
     }
 
-    return { error }
+    if (!data.user) {
+      return { error: new Error('Sign up succeeded but no user data returned') }
+    }
+
+    // CRITICAL: Create user profile BEFORE routing to dashboard
+    const { error: profileError } = await supabase
+      .from('users')
+      .insert({
+        id: data.user.id,
+        username,
+        current_xp: 0,
+        level: 1,
+      })
+
+    if (profileError) {
+      console.error('Error creating user profile:', profileError)
+
+      // Clean up auth user if profile creation fails
+      console.log('Attempting to delete auth user due to profile creation failure...')
+      await supabase.auth.admin.deleteUser(data.user.id).catch((deleteError) => {
+        console.error('Failed to cleanup auth user:', deleteError)
+      })
+
+      return {
+        error: new Error(
+          `Failed to create user profile: ${profileError.message}. ` +
+          `Please try signing up again.`
+        )
+      }
+    }
+
+    console.log('User profile created successfully, routing to dashboard')
+
+    // Wait a moment to ensure DB consistency before routing
+    await new Promise(resolve => setTimeout(resolve, 500))
+
+    router.push('/dashboard')
+    return { error: null }
   }
 
   const signOut = async () => {

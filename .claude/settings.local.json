@@ -53,7 +53,8 @@
       "Bash(del /F aktuelledb.sql)",
       "Bash(del /F frontend*.sql)",
       "Bash(del /F frontend*.mjs)",
-      "Bash(del /F frontendMIGRATION-ANLEITUNG.md)"
+      "Bash(del /F frontendMIGRATION-ANLEITUNG.md)",
+      "Bash(if exist migrations rd /s /q migrations)"
     ],
     "deny": [],
     "ask": []
