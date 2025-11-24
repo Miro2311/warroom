@@ -373,7 +373,7 @@ CREATE POLICY "Users can insert partner ratings in their groups"
 ON public.partner_ratings
 FOR INSERT
 WITH CHECK (
-  user_id = (SELECT auth.uid())
+  rater_id = (SELECT auth.uid())
   AND EXISTS (
     SELECT 1 FROM public.partners
     JOIN public.group_members ON group_members.group_id = partners.group_id
@@ -385,7 +385,7 @@ WITH CHECK (
 CREATE POLICY "Users can update own partner ratings"
 ON public.partner_ratings
 FOR UPDATE
-USING (user_id = (SELECT auth.uid()));
+USING (rater_id = (SELECT auth.uid()));
 
 -- =======================
 -- PARTNER RED FLAGS TABLE POLICIES
