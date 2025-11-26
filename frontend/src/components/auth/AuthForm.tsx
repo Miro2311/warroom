@@ -12,6 +12,24 @@ interface AuthFormProps {
   onModeChange: () => void
 }
 
+const MIN_PASSWORD_LENGTH = 8;
+
+function validatePassword(password: string): string | null {
+  if (password.length < MIN_PASSWORD_LENGTH) {
+    return `Password must be at least ${MIN_PASSWORD_LENGTH} characters`;
+  }
+  if (!/[A-Z]/.test(password)) {
+    return 'Password must contain at least one uppercase letter';
+  }
+  if (!/[a-z]/.test(password)) {
+    return 'Password must contain at least one lowercase letter';
+  }
+  if (!/[0-9]/.test(password)) {
+    return 'Password must contain at least one number';
+  }
+  return null;
+}
+
 export default function AuthForm({ mode, onSubmit, onModeChange }: AuthFormProps) {
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
@@ -22,6 +40,16 @@ export default function AuthForm({ mode, onSubmit, onModeChange }: AuthFormProps
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
     setError(null)
+
+    // Only validate password strength on signup, not login
+    if (mode === 'signup') {
+      const passwordError = validatePassword(password);
+      if (passwordError) {
+        setError(passwordError);
+        return;
+      }
+    }
+
     setLoading(true)
 
     const { error } = await onSubmit(email, password, username)
@@ -87,9 +115,14 @@ export default function AuthForm({ mode, onSubmit, onModeChange }: AuthFormProps
             value={password}
             onChange={(e) => setPassword(e.target.value)}
             required
-            minLength={6}
+            minLength={mode === 'signup' ? MIN_PASSWORD_LENGTH : undefined}
             placeholder="••••••••"
           />
+          {mode === 'signup' && (
+            <p className="text-xs text-gray-500 font-mono -mt-3">
+              Min. 8 characters with uppercase, lowercase, and number
+            </p>
+          )}
 
           <Button
             type="submit"

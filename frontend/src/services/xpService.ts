@@ -9,6 +9,40 @@ import {
 
 export class XPService {
   /**
+   * Verify that a user is a member of a group
+   */
+  private static async verifyGroupMembership(
+    userId: string,
+    groupId: string
+  ): Promise<boolean> {
+    const { data, error } = await supabase
+      .from("group_members")
+      .select("id")
+      .eq("user_id", userId)
+      .eq("group_id", groupId)
+      .single();
+
+    return !error && !!data;
+  }
+
+  /**
+   * Verify that the current user owns a partner
+   */
+  private static async verifyPartnerOwnership(
+    userId: string,
+    partnerId: string
+  ): Promise<boolean> {
+    const { data, error } = await supabase
+      .from("partners")
+      .select("id")
+      .eq("id", partnerId)
+      .eq("user_id", userId)
+      .single();
+
+    return !error && !!data;
+  }
+
+  /**
    * Award XP to a user for a specific action
    */
   static async awardXP(
@@ -20,10 +54,34 @@ export class XPService {
     metadata?: Record<string, any>
   ): Promise<LevelUpResult | null> {
     try {
+      // SECURITY: Verify user is member of the group
+      const isMember = await this.verifyGroupMembership(userId, groupId);
+      if (!isMember) {
+        console.error("[XP] Security: User is not a member of this group");
+        return null;
+      }
+
+      // SECURITY: If partner is provided, verify ownership
+      if (relatedPartnerId) {
+        const ownsPartner = await this.verifyPartnerOwnership(userId, relatedPartnerId);
+        if (!ownsPartner) {
+          console.error("[XP] Security: User does not own this partner");
+          return null;
+        }
+      }
+
       // Get XP amount from config
       const amount = this.getXPAmount(reason);
 
-      console.log(`[XP] Awarding ${amount} XP to user ${userId} for reason: ${reason}`);
+      // SECURITY: Validate XP amount is within allowed range
+      if (amount < -100 || amount > 1000) {
+        console.error("[XP] Security: Invalid XP amount");
+        return null;
+      }
+
+      if (process.env.NODE_ENV === "development") {
+        console.log(`[XP] Awarding ${amount} XP to user ${userId} for reason: ${reason}`);
+      }
 
       // Record XP transaction
       const { error: transactionError } = await supabase
@@ -43,7 +101,9 @@ export class XPService {
         return null;
       }
 
-      console.log(`[XP] Transaction recorded successfully`);
+      if (process.env.NODE_ENV === "development") {
+        console.log(`[XP] Transaction recorded successfully`);
+      }
 
       // Update user XP and level using the database function
       const { data, error } = await supabase.rpc("add_xp_to_user", {
@@ -57,7 +117,9 @@ export class XPService {
       }
 
       const result = data[0] as LevelUpResult;
-      console.log(`[XP] User updated: ${result.new_xp} XP, Level ${result.new_level}${result.leveled_up ? ' (LEVEL UP!)' : ''}`);
+      if (process.env.NODE_ENV === "development") {
+        console.log(`[XP] User updated: ${result.new_xp} XP, Level ${result.new_level}${result.leveled_up ? ' (LEVEL UP!)' : ''}`);
+      }
 
       return result;
     } catch (error) {

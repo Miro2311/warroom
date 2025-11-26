@@ -4,6 +4,23 @@ import { XPService } from "./xpService";
 
 export class PeerValidationService {
   /**
+   * Verify that a user is a member of a group
+   */
+  private static async verifyGroupMembership(
+    userId: string,
+    groupId: string
+  ): Promise<boolean> {
+    const { data, error } = await supabase
+      .from("group_members")
+      .select("id")
+      .eq("user_id", userId)
+      .eq("group_id", groupId)
+      .single();
+
+    return !error && !!data;
+  }
+
+  /**
    * Create a peer validation request
    */
   static async createValidationRequest(
@@ -16,6 +33,19 @@ export class PeerValidationService {
     metadata?: Record<string, any>
   ): Promise<PeerValidation | null> {
     try {
+      // SECURITY: Verify user is member of the group
+      const isMember = await this.verifyGroupMembership(userId, groupId);
+      if (!isMember) {
+        console.error("[Validation] Security: User is not a member of this group");
+        return null;
+      }
+
+      // SECURITY: Validate XP amount
+      if (xpAmount < 0 || xpAmount > 1000) {
+        console.error("[Validation] Security: Invalid XP amount");
+        return null;
+      }
+
       const { data, error } = await supabase
         .from("peer_validations")
         .insert({
@@ -65,16 +95,23 @@ export class PeerValidationService {
         return false;
       }
 
-      // Check if already validated by this user
-      const validators = validation.validators as string[];
-      if (validators.includes(validatorId)) {
-        console.log("User already validated this action");
+      // SECURITY: Verify validator is member of the group
+      const isMember = await this.verifyGroupMembership(validatorId, validation.group_id);
+      if (!isMember) {
+        console.error("[Validation] Security: Validator is not a member of this group");
         return false;
       }
 
-      // Check if validator is not the action owner
+      // Check if already validated by this user
+      const validators = validation.validators as string[];
+      if (validators.includes(validatorId)) {
+        console.error("User already validated this action");
+        return false;
+      }
+
+      // SECURITY: Check if validator is not the action owner
       if (validation.user_id === validatorId) {
-        console.error("Cannot validate own action");
+        console.error("[Validation] Security: Cannot validate own action");
         return false;
       }
 
@@ -147,9 +184,16 @@ export class PeerValidationService {
         return false;
       }
 
-      // Check if validator is not the action owner
+      // SECURITY: Verify validator is member of the group
+      const isMember = await this.verifyGroupMembership(validatorId, validation.group_id);
+      if (!isMember) {
+        console.error("[Validation] Security: Validator is not a member of this group");
+        return false;
+      }
+
+      // SECURITY: Check if validator is not the action owner
       if (validation.user_id === validatorId) {
-        console.error("Cannot reject own action");
+        console.error("[Validation] Security: Cannot reject own action");
         return false;
       }
 

@@ -6,6 +6,7 @@ import { X, Rocket } from "lucide-react";
 import { useAuth } from "@/contexts/AuthContext";
 import { useStore } from "@/store/useStore";
 import { supabase } from "@/lib/supabase";
+import { validatePartnerNickname, VALIDATION_LIMITS } from "@/lib/validation";
 
 interface AddPlanetModalProps {
   isOpen: boolean;
@@ -18,12 +19,21 @@ export const AddPlanetModal: React.FC<AddPlanetModalProps> = ({ isOpen, onClose 
 
   const [nickname, setNickname] = useState("");
   const [loading, setLoading] = useState(false);
+  const [error, setError] = useState("");
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    setError("");
 
-    if (!nickname.trim() || !user) {
-      console.error("Missing required data");
+    if (!user) {
+      setError("You must be logged in");
+      return;
+    }
+
+    // Validate nickname
+    const validation = validatePartnerNickname(nickname);
+    if (!validation.isValid) {
+      setError(validation.error || "Invalid nickname");
       return;
     }
 
@@ -33,7 +43,7 @@ export const AddPlanetModal: React.FC<AddPlanetModalProps> = ({ isOpen, onClose 
       // Create new partner - Partners are GLOBAL (belong to user, not group)
       // group_id is optional/legacy - we keep it for backwards compatibility
       const newPartner = {
-        nickname: nickname.trim(),
+        nickname: validation.sanitized,
         user_id: user.id,
         group_id: currentGroupId || null, // Optional - for legacy support
         status: "Talking", // Default status
@@ -151,6 +161,13 @@ export const AddPlanetModal: React.FC<AddPlanetModalProps> = ({ isOpen, onClose 
                   You can add more details later in the planet details
                 </p>
               </div>
+
+              {/* Error message */}
+              {error && (
+                <div className="p-3 rounded-lg bg-simp-red/20 border border-simp-red/50">
+                  <p className="text-xs text-simp-red font-mono">{error}</p>
+                </div>
+              )}
 
               {/* Info box */}
               <div className="p-4 rounded-lg bg-holo-cyan/10 border border-holo-cyan/30">
