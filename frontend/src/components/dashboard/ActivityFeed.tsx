@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, useEffect, useCallback } from "react";
+import React, { useState, useEffect, useCallback, useRef } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import {
   Activity,
@@ -172,7 +172,7 @@ export const ActivityFeed: React.FC<ActivityFeedProps> = ({
       if (allActivities && allActivities.length > 0) {
         // Filter: Show all events from current group
         // From other groups: only show non-Intel events (global partner events)
-        const filteredActivities = allActivities.filter((activity) => {
+        let filteredActivities = allActivities.filter((activity) => {
           if (activity.group_id === groupId) {
             // Current group: show everything
             return true;
@@ -180,6 +180,28 @@ export const ActivityFeed: React.FC<ActivityFeedProps> = ({
             // Other groups: hide Intel events (notes, ratings, red flags)
             return !INTEL_EVENT_TYPES.includes(activity.event_type);
           }
+        });
+
+        // Deduplicate global events (same actor + event_type + target within 5 seconds)
+        // This handles cases where database triggers create multiple entries
+        const seen = new Map<string, number>();
+        filteredActivities = filteredActivities.filter((activity) => {
+          // Only dedupe non-Intel (global) events
+          if (INTEL_EVENT_TYPES.includes(activity.event_type)) {
+            return true;
+          }
+
+          const key = `${activity.actor_id}-${activity.event_type}-${activity.target_partner_id || 'none'}`;
+          const timestamp = new Date(activity.created_at).getTime();
+          const existingTimestamp = seen.get(key);
+
+          if (existingTimestamp && Math.abs(timestamp - existingTimestamp) < 5000) {
+            // Duplicate within 5 seconds - skip
+            return false;
+          }
+
+          seen.set(key, timestamp);
+          return true;
         }).slice(0, 50); // Limit to 50 after filtering
 
         // Get unique actor IDs
@@ -250,9 +272,22 @@ export const ActivityFeed: React.FC<ActivityFeedProps> = ({
     loadUnreadCount();
   }, [groupId, user?.id, userGroupIds]);
 
+  // Track recently seen activities to prevent duplicates from multiple subscriptions
+  const recentActivityKeys = useRef<Map<string, number>>(new Map());
+
   // Real-time subscription for new activities - subscribe to all user's groups
   useEffect(() => {
     if (!groupId || userGroupIds.length === 0) return;
+
+    // Clean up old keys (older than 10 seconds)
+    const cleanupOldKeys = () => {
+      const now = Date.now();
+      recentActivityKeys.current.forEach((timestamp, key) => {
+        if (now - timestamp > 10000) {
+          recentActivityKeys.current.delete(key);
+        }
+      });
+    };
 
     // Create channels for all groups the user is in
     const channels = userGroupIds.map((gid) =>
@@ -275,6 +310,23 @@ export const ActivityFeed: React.FC<ActivityFeedProps> = ({
               !INTEL_EVENT_TYPES.includes(newActivity.event_type);
 
             if (!shouldShow) return;
+
+            // Deduplicate: Check if we've seen this activity recently
+            // For global events, use actor + event_type + target as key
+            const isGlobalEvent = !INTEL_EVENT_TYPES.includes(newActivity.event_type);
+            if (isGlobalEvent) {
+              const dedupeKey = `${newActivity.actor_id}-${newActivity.event_type}-${newActivity.target_partner_id || 'none'}`;
+              const now = Date.now();
+              const lastSeen = recentActivityKeys.current.get(dedupeKey);
+
+              if (lastSeen && now - lastSeen < 5000) {
+                // Duplicate within 5 seconds - skip
+                return;
+              }
+
+              recentActivityKeys.current.set(dedupeKey, now);
+              cleanupOldKeys();
+            }
 
             // Increment unread count if not from current user and sidebar is closed
             if (newActivity.actor_id !== user?.id && !isOpen) {
