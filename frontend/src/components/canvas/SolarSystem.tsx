@@ -884,7 +884,7 @@ function WarRoomFlow() {
         {/* Subtle grid overlay */}
         <Background color="#1A1A2E" gap={40} size={1} />
         <Controls
-          className="bg-glass-panel border-white/10 fill-holo-cyan [&>button]:w-11 [&>button]:h-11 [&>button]:bg-glass-panel [&>button]:border [&>button]:border-white/10"
+          className="bg-glass-panel border-white/10 fill-holo-cyan [&>button]:w-7 [&>button]:h-7 md:[&>button]:w-9 md:[&>button]:h-9 [&>button]:bg-glass-panel [&>button]:border [&>button]:border-white/10 [&>button]:text-xs"
           showZoom={true}
           showFitView={true}
           showInteractive={false}
