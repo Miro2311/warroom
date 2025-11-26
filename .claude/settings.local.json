@@ -56,7 +56,9 @@
       "Bash(del /F frontendMIGRATION-ANLEITUNG.md)",
       "Bash(if exist migrations rd /s /q migrations)",
       "WebFetch(domain:warroomdemo-pv0tf1p5p-miro-blenkes-projects.vercel.app)",
-      "Bash(npx tailwindcss:*)"
+      "Bash(npx tailwindcss:*)",
+      "Bash(node test-sync.mjs:*)",
+      "Bash(find:*)"
     ],
     "deny": [],
     "ask": []

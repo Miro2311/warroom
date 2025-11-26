@@ -19,7 +19,7 @@ import {
   X,
 } from "lucide-react";
 import { supabase } from "@/lib/supabase";
-import { syncTimelineEvent, syncDeleteTimelineEvent } from "@/lib/partnerSync";
+// Sync removed - partners are now global (one entry per user)
 
 interface FinancialTabProps {
   partner: PartnerNode;
@@ -103,15 +103,7 @@ export const FinancialTab: React.FC<FinancialTabProps> = ({ partner }) => {
 
       if (error) throw error;
 
-      // Sync to all matching partners in other groups
-      await syncTimelineEvent(partner.id, {
-        event_type: "expense",
-        title: newEvent.title,
-        description: newEvent.description || null,
-        event_date: newEvent.date,
-        amount: parseFloat(newEvent.amount),
-        category: newEvent.category,
-      });
+      // No sync needed - partners are global (one entry per user)
 
       setEvents([data, ...events]);
       setShowAddForm(false);
@@ -142,14 +134,7 @@ export const FinancialTab: React.FC<FinancialTabProps> = ({ partner }) => {
 
       if (error) throw error;
 
-      // Sync delete to all matching partners
-      if (eventToDelete) {
-        await syncDeleteTimelineEvent(partner.id, {
-          title: eventToDelete.title,
-          event_date: eventToDelete.event_date,
-          event_type: eventToDelete.event_type,
-        });
-      }
+      // No sync needed - partners are global (one entry per user)
 
       setEvents(events.filter((e) => e.id !== id));
 

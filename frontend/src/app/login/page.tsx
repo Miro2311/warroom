@@ -22,7 +22,7 @@ export default function LoginPage() {
   }
 
   return (
-    <div className="min-h-screen w-full bg-black flex items-center justify-center relative overflow-hidden">
+    <div className="min-h-screen-safe w-full bg-black flex items-center justify-center relative overflow-hidden safe-all">
       {/* Stars Background */}
       <StarsBackground factor={0.00005} speed={30} starColor="#ffffff" />
 

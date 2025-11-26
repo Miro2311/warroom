@@ -4,7 +4,7 @@ import { Node, Edge, applyNodeChanges, applyEdgeChanges, NodeChange, EdgeChange 
 import { XPService } from "@/services/xpService";
 import { AchievementService } from "@/services/achievementService";
 import { LevelUpResult } from "@/types/xp";
-import { syncPartnerData } from "@/lib/partnerSync";
+// Sync removed - partners are now global (one entry per user)
 
 interface AppState {
   user: User | null;
@@ -221,10 +221,9 @@ export const useStore = create<AppState>((set, get) => ({
 
     console.log('Database update response:', data);
 
-    console.log('✅ Partner moved to graveyard in database');
+    console.log('Partner moved to graveyard in database');
 
-    // Sync to all matching partners in other groups
-    await syncPartnerData(partnerId, updateData);
+    // No sync needed - partners are global (one entry per user)
 
     // Get old status before update
     const state = get();

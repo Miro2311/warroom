@@ -6,7 +6,6 @@ import { X, Rocket } from "lucide-react";
 import { useAuth } from "@/contexts/AuthContext";
 import { useStore } from "@/store/useStore";
 import { supabase } from "@/lib/supabase";
-import { syncNewPartner } from "@/lib/partnerSync";
 
 interface AddPlanetModalProps {
   isOpen: boolean;
@@ -23,7 +22,7 @@ export const AddPlanetModal: React.FC<AddPlanetModalProps> = ({ isOpen, onClose 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
 
-    if (!nickname.trim() || !user || !currentGroupId) {
+    if (!nickname.trim() || !user) {
       console.error("Missing required data");
       return;
     }
@@ -31,11 +30,12 @@ export const AddPlanetModal: React.FC<AddPlanetModalProps> = ({ isOpen, onClose 
     setLoading(true);
 
     try {
-      // Create new partner with minimal data
+      // Create new partner - Partners are GLOBAL (belong to user, not group)
+      // group_id is optional/legacy - we keep it for backwards compatibility
       const newPartner = {
         nickname: nickname.trim(),
         user_id: user.id,
-        group_id: currentGroupId,
+        group_id: currentGroupId || null, // Optional - for legacy support
         status: "Talking", // Default status
         financial_total: 0,
         time_total: 0,
@@ -56,33 +56,8 @@ export const AddPlanetModal: React.FC<AddPlanetModalProps> = ({ isOpen, onClose 
 
       console.log("Partner created successfully:", data);
 
-      // Sync to all other groups the user is in
-      console.log("About to call syncNewPartner with:", {
-        userId: user.id,
-        currentGroupId,
-        partnerData: {
-          id: data.id,
-          nickname: data.nickname,
-          status: data.status,
-          financial_total: data.financial_total,
-          time_total: data.time_total,
-          intimacy_score: data.intimacy_score,
-        }
-      });
-
-      try {
-        await syncNewPartner(user.id, currentGroupId, {
-          id: data.id,
-          nickname: data.nickname,
-          status: data.status,
-          financial_total: data.financial_total,
-          time_total: data.time_total,
-          intimacy_score: data.intimacy_score,
-        });
-        console.log("syncNewPartner completed successfully");
-      } catch (syncError) {
-        console.error("syncNewPartner failed:", syncError);
-      }
+      // No sync needed - partners are global now!
+      // The partner will automatically appear in all groups the user is in
 
       // Add to store
       addPartner(data);

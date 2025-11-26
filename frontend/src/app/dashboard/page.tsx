@@ -7,7 +7,7 @@ import { motion } from 'framer-motion'
 import { Plus, Users, LogOut, Loader2 } from 'lucide-react'
 import { useRouter } from 'next/navigation'
 import { StarsBackground } from '@/components/ui/stars-background'
-import { copyPartnersToNewGroup } from '@/lib/partnerSync'
+// Partners are now global - no sync needed
 
 interface Group {
   id: string
@@ -228,8 +228,8 @@ export default function DashboardPage() {
 
       console.log('Successfully joined group:', groupData.name)
 
-      // Copy all user's existing partners to the new group
-      await copyPartnersToNewGroup(user.id, groupData.id)
+      // Partners are now global - no need to copy them to new groups
+      // They will automatically appear when the user loads this group
 
       // Success - reset form and reload groups
       setInviteCode('')
@@ -265,14 +265,14 @@ export default function DashboardPage() {
 
   if (authLoading || loading) {
     return (
-      <div className="min-h-screen w-full bg-black flex items-center justify-center">
+      <div className="min-h-screen-safe w-full bg-black flex items-center justify-center">
         <Loader2 className="h-8 w-8 text-white animate-spin" />
       </div>
     )
   }
 
   return (
-    <div className="min-h-screen w-full bg-black relative overflow-hidden">
+    <div className="min-h-screen-safe w-full bg-black relative overflow-hidden safe-all">
       {/* Stars Background */}
       <StarsBackground factor={0.00005} speed={30} starColor="#ffffff" />
 

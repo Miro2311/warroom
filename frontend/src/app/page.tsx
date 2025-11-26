@@ -30,14 +30,14 @@ export default function HomePage() {
 
   if (authLoading || !user) {
     return (
-      <div className="min-h-screen w-full bg-deep-void flex items-center justify-center">
+      <div className="min-h-screen-safe w-full bg-deep-void flex items-center justify-center">
         <Loader2 className="h-8 w-8 text-holo-cyan animate-spin" />
       </div>
     )
   }
 
   return (
-    <main className="w-screen h-screen overflow-hidden relative">
+    <main className="w-screen h-screen-safe overflow-hidden relative safe-bottom">
       <div className="w-full h-full">
         <SolarSystem />
       </div>

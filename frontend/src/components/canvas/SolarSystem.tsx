@@ -25,6 +25,7 @@ import { DashboardHeader } from "../dashboard/DashboardHeader";
 import { GalaxyBackground } from "./GalaxyBackground";
 import { BettingStudioPanel } from "../ui/BettingStudioPanel";
 import { AddPlanetModal } from "../dashboard/AddPlanetModal";
+import { ActivityFeed } from "../dashboard/ActivityFeed";
 import {
   GraveyardZone,
   TombstoneNode,
@@ -42,7 +43,7 @@ import {
   getRandomStartAngle,
   calculateTimeOffset,
 } from "@/lib/orbitCalculator";
-import { syncPartnerData } from "@/lib/partnerSync";
+// Sync removed - partners are now global (one entry per user)
 import { Variants } from "framer-motion";
 
 const warpAnimation: Variants = {
@@ -131,6 +132,19 @@ function WarRoomFlow() {
   // Add Planet Modal state
   const [showAddPlanetModal, setShowAddPlanetModal] = useState(false);
 
+  // Mobile view detection for Activity Feed
+  const [isMobileView, setIsMobileView] = useState(false);
+
+  // Check for mobile view
+  useEffect(() => {
+    const checkMobile = () => {
+      setIsMobileView(window.innerWidth < 768);
+    };
+    checkMobile();
+    window.addEventListener('resize', checkMobile);
+    return () => window.removeEventListener('resize', checkMobile);
+  }, []);
+
   // Get graveyard count
   const graveyardCount = useGraveyardCount(partners);
   const graveyardPartners = partners.filter((p) => p.status === "Graveyard");
@@ -208,6 +222,32 @@ function WarRoomFlow() {
     window.addEventListener('open-add-planet-modal', handleOpenAddPlanet);
     return () => window.removeEventListener('open-add-planet-modal', handleOpenAddPlanet);
   }, []);
+
+  // Listen for partner detail open event from activity feed
+  useEffect(() => {
+    const handleOpenPartnerDetail = (event: CustomEvent<{ partnerId: string }>) => {
+      const { partnerId } = event.detail;
+      if (partnerId) {
+        // Find the node to zoom to it first
+        const partnerNode = nodes.find(n => n.id === partnerId);
+        if (partnerNode) {
+          fitView({
+            nodes: [partnerNode],
+            duration: 1000,
+            padding: 0.25,
+            maxZoom: 1.8,
+          });
+        }
+        // Open the modal after zoom
+        setTimeout(() => {
+          setSelectedPartnerId(partnerId);
+        }, 1100);
+      }
+    };
+
+    window.addEventListener('open-partner-detail', handleOpenPartnerDetail as EventListener);
+    return () => window.removeEventListener('open-partner-detail', handleOpenPartnerDetail as EventListener);
+  }, [nodes, fitView, setSelectedPartnerId]);
 
   // Load group members and organize partners by user
   useEffect(() => {
@@ -676,8 +716,7 @@ function WarRoomFlow() {
 
       console.log('Partner updated successfully in database:', data);
 
-      // Sync to all matching partners in other groups
-      await syncPartnerData(updatedPartner.id, updateData);
+      // No sync needed - partners are global (one entry per user)
 
       // Update local state through the store
       useStore.getState().updatePartner(updatedPartner.id, {
@@ -921,13 +960,19 @@ function WarRoomFlow() {
         isOpen={showAddPlanetModal}
         onClose={() => setShowAddPlanetModal(false)}
       />
+
+      {/* Activity Feed - Self-managed sidebar/bottom sheet */}
+      <ActivityFeed
+        groupId={currentGroupId || ""}
+        isMobile={isMobileView}
+      />
     </>
   );
 }
 
 export default function SolarSystem() {
   return (
-    <div className="w-full h-screen bg-deep-space relative">
+    <div className="w-full h-screen-safe bg-deep-space relative">
       <DashboardHeader />
       <ReactFlowProvider>
         <WarRoomFlow />

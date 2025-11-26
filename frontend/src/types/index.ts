@@ -244,3 +244,34 @@ export interface WeeklySystemBets {
   bets_generated: number;
   created_at: string;
 }
+
+// =============================================
+// ACTIVITY FEED TYPES
+// =============================================
+
+export type ActivityEventType =
+  | "member_joined"
+  | "date_created"
+  | "photo_added"
+  | "red_flag_added"
+  | "friend_rating_added"
+  | "note_added"
+  | "simp_alert"
+  | "bet_created";
+
+export interface ActivityFeedItem {
+  id: string;
+  group_id: string;
+  actor_id: string;
+  event_type: ActivityEventType;
+  target_partner_id?: string;
+  target_user_id?: string;
+  title: string;
+  description?: string;
+  metadata?: Record<string, any>;
+  created_at: string;
+  // Populated via joins
+  actor?: User;
+  target_partner?: PartnerNode;
+  target_user?: User;
+}
